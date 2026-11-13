@@ -1,0 +1,68 @@
+<?php
+
+return [
+    'items' => [
+        'mingbi',
+        'yuanbao',
+        'xiang',
+        'juhua',
+        'naicha',
+        'phone',
+        'wifi',
+        'qiuku',
+        'mao',
+        'car',
+        'villa',
+        'nianjia',
+        'cizhi',
+    ],
+
+    'tomb_styles' => [
+        'qingshi',
+        'hanbai',
+        'neon',
+        'tubao',
+        'mupai',
+    ],
+
+    'dream_styles' => [
+        'plain',
+        'warm',
+        'scary',
+        'mystic',
+    ],
+
+    'npc_dream_styles' => [
+        'plain',
+        'warm',
+        'mystic',
+    ],
+
+    'npc_dreams' => [
+        'laowang' => [
+            '钱收到了，谢谢。顺便说一句，你家水管确实该修了。',
+            '梦里我又去修水管了，这次真的只是去修水管。',
+            '东西收到，别跟别人说是我收的。',
+        ],
+        'coder' => [
+            '收到。这边没有产品经理，需求从来不改。',
+            '你烧的路由器连不上，DNS 有问题，我在查。',
+            '记得给代码写注释。我就是因为没写才下来的。',
+        ],
+        'juanwang' => [
+            '收到。我已经在地府考上编制了，你呢？',
+            '别烧纸了，烧点学习资料。',
+            '你今天睡了几个小时？我已经不用睡了。',
+        ],
+        'wuming' => [
+            '……谁？',
+            '说了没人。东西我先替没人收着。',
+            '（梦里只有一阵风）',
+        ],
+        'afei' => [
+            '奶茶收到，下次少冰。',
+            '这边自助餐不限时，我终于回本了。',
+            '你瘦了，多吃点。',
+        ],
+    ],
+];

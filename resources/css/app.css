@@ -1,0 +1,23 @@
+/* Tailwind entry — handmade art lives in resources/js/styles/app.css */
+@import 'tailwindcss';
+@import '../js/styles/app.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../js/**/*.{vue,js,ts}';
+
+@theme {
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    --color-stone: var(--stone);
+    --color-bone: var(--bone);
+    --color-bone-dim: var(--bone-dim);
+    --color-joss: var(--joss);
+    --color-seal: var(--seal);
+    --color-wisp: var(--wisp);
+    --color-line: var(--line);
+    --font-brush: var(--font-brush);
+    --font-body: var(--font-body);
+    --font-cyber: var(--font-cyber);
+    --font-sans: var(--font-body);
+}

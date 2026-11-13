@@ -1,0 +1,73 @@
+<?php
+
+/**
+ * 5 位原住民墓碑种子数据（来自原型 NPCS）。
+ * died_at 为 ISO UTC（对应 Date.UTC(...)）。
+ */
+return [
+    [
+        'npc_key' => 'laowang',
+        'code' => 'laowang',
+        'plot' => 5,
+        'name' => '隔壁老王',
+        'birth_year' => 1971,
+        'cause' => '被邻居误会',
+        'epitaph' => '我真的只是来修水管的',
+        'style' => 'qingshi',
+        'portrait' => 1,
+        'died_at' => '2024-04-04T00:00:00.000Z',
+        'last_words' => '水管修好了',
+    ],
+    [
+        'npc_key' => 'coder',
+        'code' => 'coder',
+        'plot' => 11,
+        'name' => '某程序员',
+        'birth_year' => 1994,
+        'cause' => '周五下午发版',
+        'epitaph' => 'Hello World. Goodbye World.',
+        'style' => 'neon',
+        'portrait' => 0,
+        'died_at' => '2025-11-07T00:00:00.000Z',
+        'last_words' => '在我电脑上是好的',
+    ],
+    [
+        'npc_key' => 'juanwang',
+        'code' => 'juanwang',
+        'plot' => 16,
+        'name' => '卷王小李',
+        'birth_year' => 1999,
+        'cause' => '卷死了',
+        'epitaph' => '下辈子一定躺平',
+        'style' => 'hanbai',
+        'portrait' => 2,
+        'died_at' => '2025-06-30T00:00:00.000Z',
+        'last_words' => '再学五分钟',
+    ],
+    [
+        'npc_key' => 'wuming',
+        'code' => 'wuming',
+        'plot' => 22,
+        'name' => '无名氏',
+        'birth_year' => 1900,
+        'cause' => '不详',
+        'epitaph' => '此处无人，请勿烧纸',
+        'style' => 'tubao',
+        'portrait' => 5,
+        'died_at' => '1999-01-01T00:00:00.000Z',
+        'last_words' => '',
+    ],
+    [
+        'npc_key' => 'afei',
+        'code' => 'afei',
+        'plot' => 25,
+        'name' => '吃货阿肥',
+        'birth_year' => 1990,
+        'cause' => '自助餐回本未遂',
+        'epitaph' => '这顿我请',
+        'style' => 'mupai',
+        'portrait' => 3,
+        'died_at' => '2023-08-15T00:00:00.000Z',
+        'last_words' => '再来一盘',
+    ],
+];
