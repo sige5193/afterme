@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电子墓地</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;900&family=ZCOOL+QingKe+HuangYou&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 夜里的墓园：墨蓝夜色、纸钱黄、朱砂印、鬼火青。布局：顶栏 + 一整片墓园地图；抽屉看碑，全屏层办丧事、化纸、托梦。白天换成阴天的灰绿。 */
+  --ink:#0b0e13; --ink-2:#151b23; --stone:#2b323b; --bone:#ece6d6; --bone-dim:#a6a192;
+  --joss:#d9b25a; --seal:#b8342a; --wisp:#9fe8d4; --line:rgba(236,230,214,.14);
+  --font-brush:"Ma Shan Zheng","STXingkai","Xingkai SC","KaiTi","Kaiti SC",serif;
+  --font-body:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --font-cyber:"ZCOOL QingKe HuangYou","PingFang SC","Microsoft YaHei",sans-serif;
+  color-scheme:dark;
+}
+body.day{
+  --ink:#c9cdc5; --ink-2:#d8dbd4; --stone:#8b9188; --bone:#1d2226; --bone-dim:#545b55;
+  --joss:#8a6514; --wisp:#2f6b5e; --line:rgba(29,34,38,.18);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ink);color:var(--bone);font-family:var(--font-body);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;transition:background .8s,color .8s}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--joss);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.brush{font-family:var(--font-brush);font-weight:400}
+.vt{writing-mode:vertical-rl;text-orientation:upright}
+[hidden]{display:none!important}
+
+/* ---------- 顶栏 ---------- */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 16px;background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--font-brush);font-size:30px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.brand small{font-family:var(--font-body);font-size:11px;color:var(--bone-dim);letter-spacing:.24em;margin-left:8px;vertical-align:middle}
+.clock{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--bone-dim);padding:3px 11px;border:1px solid var(--line);border-radius:999px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.clock b{color:var(--joss);font-weight:600}
+.who{font-size:13px;color:var(--bone-dim);white-space:nowrap}
+.who b{color:var(--bone);font-weight:600}
+.spacer{flex:1}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;border-radius:6px;border:1px solid var(--line);background:transparent;font-size:14px;line-height:1.4;transition:background .2s,border-color .2s,filter .2s;white-space:nowrap}
+.btn:hover{border-color:var(--joss)}
+.btn.primary{background:var(--joss);border-color:var(--joss);color:#17120a;font-weight:600}
+body.day .btn.primary{color:#fbf6ea}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.seal{background:var(--seal);border-color:var(--seal);color:#fff;font-weight:600}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn.quiet{border-color:transparent;color:var(--bone-dim)}
+.btn.quiet:hover{color:var(--bone)}
+.btn:disabled{opacity:.42;cursor:not-allowed;filter:none}
+.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--seal);color:#fff;font-size:11px;font-weight:700;line-height:1;font-family:system-ui,sans-serif}
+.net{font-size:12px;color:var(--bone-dim)}
+
+/* ---------- 墓园 ---------- */
+main{min-height:calc(100% - 58px)}
+.scene{position:relative;min-height:calc(100vh - 58px);overflow:hidden}
+#bg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.yard{position:relative;max-width:1000px;margin:0 auto;padding:28px 16px 70px}
+.hero{max-width:640px;padding:30px 0 34px}
+.hero h1{font-family:var(--font-brush);font-size:clamp(56px,11vw,104px);line-height:1;letter-spacing:.06em;font-weight:400}
+.hero h1 span{color:var(--joss)}
+.hero p{max-width:32em;margin:16px 0 22px;color:var(--bone-dim);font-size:16px}
+.hero p b{color:var(--bone);font-weight:600}
+.hero .row{display:flex;gap:10px;flex-wrap:wrap}
+.hero .btn{padding:10px 18px;font-size:15px}
+.ghostbar{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;margin:8px 0 26px;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--ink) 70%,transparent)}
+.ghostbar .gb-t{font-family:var(--font-brush);font-size:26px;line-height:1;color:var(--wisp)}
+.ghostbar .gb-d{font-size:13px;color:var(--bone-dim);flex:1;min-width:200px}
+.ghostbar .zs{font-size:13px;color:#fff;background:var(--seal);padding:3px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+.yard-meta{display:flex;gap:6px 18px;flex-wrap:wrap;font-size:12px;color:var(--bone-dim);margin:0 0 14px;letter-spacing:.04em}
+.yard-meta b{color:var(--bone);font-weight:600}
+.localnote{font-size:12px;color:var(--bone);background:color-mix(in srgb,var(--seal) 30%,transparent);border:1px solid color-mix(in srgb,var(--seal) 60%,transparent);border-radius:8px;padding:8px 12px;margin-bottom:16px}
+.grid{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:18px 10px}
+@media (max-width:820px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:540px){.grid{grid-template-columns:repeat(3,1fr)}}
+.plot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:156px;padding:8px 4px 6px;border:0;background:transparent;border-radius:10px;transition:background .2s}
+.plot:hover{background:color-mix(in srgb,var(--bone) 6%,transparent)}
+.plot .mound{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);width:92px;height:26px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(120,98,66,.6),rgba(60,48,30,0) 70%)}
+body.day .plot .mound{background:radial-gradient(ellipse at 50% 40%,rgba(98,84,60,.45),rgba(60,48,30,0) 70%)}
+.plot .pname{position:relative;font-size:13px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:8px}
+.plot .psub{position:relative;font-size:11px;color:var(--bone-dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plot.empty .hole{position:relative;width:62px;height:76px;border:1px dashed color-mix(in srgb,var(--bone) 22%,transparent);border-radius:30px 30px 4px 4px;margin-bottom:6px}
+.plot.empty .plabel{position:relative;font-size:11px;color:var(--bone-dim)}
+.plot.empty .plabel.sp{color:var(--joss)}
+.plot.mine .pname{color:var(--joss)}
+.plot.mine::before{content:"我的坟";position:absolute;top:6px;right:6px;font-size:10px;line-height:1;padding:3px 4px;border:1px solid var(--seal);color:var(--seal);border-radius:3px;transform:rotate(6deg)}
+.plot.wobble .stone{animation:wobble .5s}
+
+/* 碑：小号 */
+.stone{position:relative;display:grid;place-items:center;width:56px;height:78px;border-radius:28px 28px 4px 4px;background:linear-gradient(160deg,#68717b,#3a414a 75%);color:#e9e4d7;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),0 5px 0 #23282e;font-size:12px;letter-spacing:.12em;font-weight:600;text-shadow:0 -1px 0 rgba(0,0,0,.5)}
+.stone .vt{max-height:62px;overflow:hidden}
+.stone.s-hanbai{background:linear-gradient(160deg,#f7f3ea,#cfc7b6 80%);color:#8a6514;text-shadow:0 1px 0 #fff;box-shadow:inset 0 2px 0 #fff,0 5px 0 #a39b8a}
+.stone.s-neon{background:#0b0d12;border:2px solid #4ef0ff;border-radius:6px;color:#a8f8ff;font-family:var(--font-cyber);font-weight:400;box-shadow:0 0 14px rgba(78,240,255,.55),inset 0 0 10px rgba(78,240,255,.3);text-shadow:0 0 6px #4ef0ff}
+.stone.s-mupai{width:30px;height:88px;border-radius:3px;background:linear-gradient(90deg,#6e4c2c,#9a7047 50%,#6e4c2c);color:#2a1a0c;text-shadow:0 1px 0 rgba(255,230,190,.3);box-shadow:0 4px 0 #3f2a16}
+.stone.s-tubao{width:84px;height:44px;margin-top:34px;border-radius:50% 50% 10px 10px / 100% 100% 10px 10px;background:radial-gradient(ellipse at 50% 30%,#7a5d3b,#4a3721 75%);box-shadow:0 4px 0 #2e2214}
+.stone.s-tubao .stake{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);width:24px;height:60px;display:grid;place-items:center;background:linear-gradient(90deg,#7c5733,#a87c4f,#7c5733);color:#2a1a0c;border-radius:2px;font-size:11px;text-shadow:none}
+.stone.s-tubao .stake .vt{max-height:52px}
+.plot.hot .stone::after{content:"";position:absolute;left:50%;bottom:100%;width:10px;height:34px;margin-left:-5px;border-radius:50%;background:radial-gradient(closest-side,rgba(225,222,210,.55),transparent);filter:blur(3px);animation:smoke 3.4s ease-in-out infinite}
+
+/* 鬼 */
+.ghost{position:absolute;left:0;top:0;width:44px;height:54px;margin-left:-22px;pointer-events:none;z-index:6;color:#f5f2ea;transition:transform .9s cubic-bezier(.4,.1,.2,1)}
+.ghost svg{width:100%;height:100%;animation:bob 2.6s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(159,232,212,.6))}
+body.day .ghost svg{filter:drop-shadow(0 0 6px rgba(255,120,80,.7))}
+.ghost .tag{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:11px;line-height:1;white-space:nowrap;color:var(--wisp);font-weight:600}
+.ghost.peer{color:var(--wisp);opacity:.8;width:36px;height:44px;margin-left:-4px}
+.ghost.noanim{transition:none}
+
+/* ---------- 抽屉：看碑 ---------- */
+.drawer{position:fixed;top:var(--toph,58px);right:0;bottom:0;width:min(420px,100%);z-index:40;background:var(--ink-2);border-left:1px solid var(--line);transform:translateX(105%);transition:transform .35s ease;overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.35);padding:16px 20px 28px}
+.drawer.open{transform:none}
+@media (max-width:640px){.drawer{top:auto;width:100%;height:88%;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;transform:translateY(105%)}}
+.dr-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--bone-dim);letter-spacing:.06em}
+.x{border:0;background:transparent;font-size:18px;padding:4px 8px;color:var(--bone-dim)}
+.x:hover{color:var(--bone)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:22px 0 0;font-size:14px}
+.facts dt{color:var(--bone-dim)}
+.facts dd{margin:0}
+.block{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.lbl{font-size:12px;color:var(--bone-dim);letter-spacing:.12em;margin-bottom:6px}
+.ep-text{font-size:19px;line-height:1.7;margin:0;font-weight:600}
+.note{font-size:12px;color:var(--bone-dim);margin-top:6px}
+.offer-chips{display:flex;flex-wrap:wrap;gap:6px}
+.oc{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+.marks{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.mark{font-size:12px;padding:2px 8px;border:1px solid var(--seal);color:var(--seal);border-radius:3px}
+body:not(.day) .mark{color:#e46a5e;border-color:#e46a5e}
+.dr-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.dr-acts .btn.primary{flex:1 1 100%;padding:11px;font-size:16px}
+.why{font-size:12px;color:var(--bone-dim);margin-top:8px}
+
+/* 碑：大号 */
+.bigstone{position:relative;margin:18px auto 0;width:220px;height:300px;border-radius:110px 110px 10px 10px;display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px 16px 18px;background:linear-gradient(160deg,#6c757f,#3a414a 72%);color:#ebe6da;box-shadow:inset 0 3px 0 rgba(255,255,255,.14),0 12px 0 #23282e;text-shadow:0 1px 0 rgba(255,255,255,.12),0 -1px 0 rgba(0,0,0,.55)}
+.bigstone.shake{animation:shake .45s}
+.bs-cols{display:flex;flex-direction:row-reverse;justify-content:center;align-items:flex-start;gap:14px;flex:1;min-height:0}
+.bs-main{font-size:28px;font-weight:900;letter-spacing:.12em;line-height:1.1;white-space:nowrap;max-height:200px;overflow:hidden}
+.bs-side{font-size:11px;letter-spacing:.08em;line-height:1.3;opacity:.82;margin-top:14px;max-height:180px}
+.bigstone.s-hanbai{background:linear-gradient(160deg,#f8f4eb,#cbc3b1 82%);color:#8a6514;text-shadow:0 1px 0 #fff;box-shadow:inset 0 3px 0 #fff,0 12px 0 #9f978a}
+.bigstone.s-neon{background:#090b10;border:2px solid #4ef0ff;border-radius:12px;color:#aaf8ff;font-family:var(--font-cyber);text-shadow:0 0 8px #4ef0ff;box-shadow:0 0 30px rgba(78,240,255,.45),inset 0 0 24px rgba(78,240,255,.25)}
+.bigstone.s-neon .bs-main{font-weight:400}
+.bigstone.s-mupai,.bigstone.s-tubao{width:150px;border-radius:6px;background:linear-gradient(90deg,#6e4c2c,#a1774c 50%,#6e4c2c);color:#26170a;text-shadow:0 1px 0 rgba(255,230,190,.35);box-shadow:0 10px 0 #3f2a16}
+.bigstone.s-tubao{margin-bottom:40px}
+.bigstone.s-tubao::after{content:"";position:absolute;left:50%;bottom:-46px;width:260px;height:70px;transform:translateX(-50%);border-radius:50% 50% 12px 12px / 100% 100% 12px 12px;background:radial-gradient(ellipse at 50% 30%,#7a5d3b,#4a3721 75%);z-index:-1}
+
+/* 遗像 */
+.portrait{position:relative;display:inline-grid;place-items:center;width:46px;height:58px;background:#d8d5ce;border:4px solid #121212;border-radius:3px;flex:none;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.portrait .face{font-size:28px;line-height:1;filter:grayscale(1) contrast(1.15) brightness(1.05)}
+.portrait::before,.portrait::after{content:"";position:absolute;top:0;width:16px;height:16px;background:#121212}
+.portrait::before{left:0;clip-path:polygon(0 0,100% 0,0 100%)}
+.portrait::after{right:0;clip-path:polygon(0 0,100% 0,100% 100%)}
+.portrait.big{width:150px;height:190px;border-width:9px}
+.portrait.big .face{font-size:96px}
+.portrait.big::before,.portrait.big::after{width:46px;height:46px}
+.rosette{position:absolute;top:-30px;left:50%;width:56px;height:40px;transform:translateX(-50%);background:radial-gradient(circle at 50% 50%,#000 0 9px,transparent 10px),radial-gradient(ellipse at 22% 50%,#111 0 15px,transparent 16px),radial-gradient(ellipse at 78% 50%,#111 0 15px,transparent 16px);z-index:2}
+
+/* ---------- 弹窗 ---------- */
+.modal-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px;animation:fade .2s}
+.modal{position:relative;width:min(580px,100%);max-height:calc(100% - 16px);overflow:auto;background:var(--ink-2);color:var(--bone);border:1px solid var(--line);border-radius:12px;padding:22px 22px 20px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.modal h2{font-family:var(--font-brush);font-weight:400;font-size:32px;line-height:1.1;margin-bottom:4px}
+.modal .sub{font-size:13px;color:var(--bone-dim);margin:0 0 16px}
+.modal .x{position:absolute;top:10px;right:10px}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.field>label,.field>.flabel{font-size:13px;color:var(--bone-dim)}
+input[type=text],input[type=number],textarea{font:inherit;color:var(--bone);background:color-mix(in srgb,var(--bone) 6%,transparent);border:1px solid var(--line);border-radius:6px;padding:9px 11px;width:100%}
+textarea{resize:vertical;min-height:76px;line-height:1.6}
+input::placeholder,textarea::placeholder{color:var(--bone-dim);opacity:.8}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;line-height:1.5}
+.chip:hover{border-color:var(--joss)}
+.chip.on{background:var(--bone);color:var(--ink);border-color:var(--bone)}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.iw{position:relative}
+.item{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 6px 8px;border:1px solid var(--line);border-radius:8px;background:transparent;text-align:center}
+.item:hover{border-color:var(--joss)}
+.item.on{border-color:var(--joss);background:color-mix(in srgb,var(--joss) 14%,transparent)}
+.item .ic{font-size:30px;line-height:1.15}
+.item .nm{font-size:13px;font-weight:600}
+.item .nt{font-size:11px;color:var(--bone-dim);line-height:1.35}
+.iw .cnt{position:absolute;top:5px;right:5px;pointer-events:none}
+.iw .minus{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--ink-2);font-size:14px;line-height:1;padding:0;display:grid;place-items:center}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bl{border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.bl-h{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.bl-h time{color:var(--bone-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bl-items{font-size:13px;color:var(--bone-dim);margin-top:2px}
+.bl-msg{margin:8px 0 0;font-size:15px;line-height:1.6;cursor:default}
+.bl-msg.muffled{filter:blur(3.5px);cursor:pointer;user-select:none}
+.bl-f{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--bone-dim)}
+.ok{color:var(--wisp)}
+.empty-note{font-size:14px;color:var(--bone-dim);padding:18px 0;text-align:center}
+.reply-quote{margin-top:8px;padding:8px 10px;border-left:2px solid var(--wisp);font-size:13px;color:var(--bone-dim)}
+.copybox{font-size:14px;padding:12px;border:1px dashed var(--line);border-radius:8px;line-height:1.7;user-select:all}
+.steps-list{margin:0;padding-left:20px;font-size:14px;line-height:1.9}
+.wealth{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.wealth div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
+.bignum{font-family:var(--font-brush);font-size:44px;line-height:1.1;color:var(--joss)}
+
+/* ---------- toast ---------- */
+.toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(520px,calc(100% - 32px))}
+.toast{pointer-events:auto;background:#1b2129;color:#ece6d6;border:1px solid rgba(236,230,214,.16);border-left:3px solid #d9b25a;padding:10px 14px;border-radius:8px;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.4);display:flex;gap:12px;align-items:center;animation:tin .3s}
+.toast .btn{color:#ece6d6;border-color:rgba(236,230,214,.25);padding:3px 10px;font-size:13px}
+.toast.err{border-left-color:#e05a4c}
+
+/* ---------- 葬礼 ---------- */
+.fun{position:fixed;inset:0;z-index:70;overflow-y:auto;background:#07090c;color:#ece6d6;--ink:#0b0e13;--ink-2:#151b23;--bone:#ece6d6;--bone-dim:#a6a192;--joss:#d9b25a;--line:rgba(236,230,214,.14);--wisp:#9fe8d4;color-scheme:dark;animation:fade .4s}
+.fun-top{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:14px;padding:12px 16px;background:rgba(7,9,12,.92);border-bottom:1px solid rgba(236,230,214,.1)}
+.fun-top .x{margin-left:auto}
+.steps{display:flex;gap:4px;flex-wrap:wrap;font-size:13px}
+.steps span{padding:3px 10px;border-radius:999px;color:#7d796d}
+.steps span.on{color:#17120a;background:#d9b25a;font-weight:600}
+.steps span.done{color:#d9b25a}
+.fun-body{max-width:900px;margin:0 auto;padding:28px 16px 60px}
+.paper{position:relative;background:#ebe4d2;color:#2a241a;border-radius:3px;padding:30px 26px 26px;box-shadow:0 24px 70px rgba(0,0,0,.55);background-image:repeating-linear-gradient(transparent 0 33px,rgba(90,66,30,.11) 33px 34px)}
+.paper h2{font-family:var(--font-brush);font-size:38px;font-weight:400;line-height:1.1}
+.paper .sub{font-size:12px;color:#7a6a4e;letter-spacing:.1em;margin-top:6px}
+.paper .field>label,.paper .field>.flabel{color:#6c5a3c}
+.paper input[type=text],.paper input[type=number],.paper textarea{color:#2a241a;background:rgba(255,255,255,.5);border-color:rgba(70,50,20,.28)}
+.paper input::placeholder,.paper textarea::placeholder{color:#8f7f62}
+.paper .chip{border-color:rgba(70,50,20,.3)}
+.paper .chip.on{background:#2a241a;color:#ebe4d2;border-color:#2a241a}
+.paper .chip:hover{border-color:#8a6514}
+.stamp{position:absolute;top:22px;right:22px;width:84px;height:84px;border:3px solid #b8342a;color:#b8342a;font-family:var(--font-brush);font-size:21px;line-height:1.05;display:grid;place-items:center;text-align:center;transform:rotate(-9deg);opacity:.85;border-radius:6px;padding:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+@media (max-width:600px){.two{grid-template-columns:1fr}.stamp{width:64px;height:64px;font-size:16px;top:14px;right:14px}}
+.faces{display:flex;gap:8px;flex-wrap:wrap}
+.faces button{border:2px solid transparent;background:transparent;padding:2px;border-radius:6px}
+.faces button.on{border-color:#b8342a}
+.faces .portrait{width:44px;height:56px}
+.faces .portrait .face{font-size:26px}
+.fun-nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
+.fun-nav .btn{padding:10px 20px;font-size:15px}
+.err-line{color:#e46a5e;font-size:13px;margin-top:10px;min-height:1em}
+.split{display:grid;grid-template-columns:1fr 260px;gap:26px;align-items:start}
+@media (max-width:760px){.split{grid-template-columns:1fr}}
+.preview{position:sticky;top:76px;text-align:center}
+.preview .lbl{color:#a6a192}
+.stylepick{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.stylepick button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px 10px;border:1px solid rgba(236,230,214,.14);border-radius:10px;background:transparent;min-height:150px;justify-content:flex-end}
+.stylepick button.on{border-color:#d9b25a;background:rgba(217,178,90,.1)}
+.stylepick small{font-size:11px;color:#a6a192}
+.minigrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.minigrid button{height:52px;border:1px solid rgba(236,230,214,.14);border-radius:6px;background:transparent;font-size:11px;line-height:1.25;padding:2px;color:#a6a192}
+.minigrid button.taken{opacity:.45;cursor:not-allowed;color:#ece6d6;background:rgba(236,230,214,.05)}
+.minigrid button.sp{color:#d9b25a}
+.minigrid button.on{border-color:#d9b25a;background:#d9b25a;color:#17120a;font-weight:600}
+.dark-field>label,.dark-field>.flabel{color:#a6a192}
+
+/* 灵堂 */
+.hall{position:relative;min-height:calc(100vh - 58px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:30px 16px 40px;background:radial-gradient(ellipse at 50% 28%,#1f262f,#07090c 68%);overflow:hidden}
+.hbanner{font-family:var(--font-brush);font-size:clamp(26px,5vw,40px);color:#f2ede0;background:#121212;padding:4px 30px;border:1px solid #333;letter-spacing:.32em;line-height:1.4}
+.couplet{position:absolute;top:96px;background:#efebe1;color:#141414;font-family:var(--font-brush);font-size:clamp(18px,3vw,28px);padding:16px 8px;letter-spacing:.22em;box-shadow:0 8px 24px rgba(0,0,0,.5);writing-mode:vertical-rl}
+.couplet.r{right:5%}.couplet.l{left:5%}
+@media (max-width:640px){.couplet{top:84px;padding:10px 4px}.couplet.r{right:8px}.couplet.l{left:8px}}
+.stage{display:flex;flex-direction:column;align-items:center;gap:16px;transition:transform .5s ease;transform-origin:50% 100%}
+.stage.bowing{transform:perspective(900px) rotateX(22deg) translateY(14px) scale(.97)}
+.altar{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:30px}
+.altar .nm{font-size:20px;font-weight:600;letter-spacing:.3em}
+.candles{display:flex;gap:120px;margin-top:-30px}
+.candle{width:10px;height:44px;background:linear-gradient(#f3efe6,#cfc7b6);border-radius:2px;position:relative}
+.candle::before{content:"";position:absolute;left:50%;top:-16px;width:10px;height:16px;margin-left:-5px;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;background:radial-gradient(ellipse at 50% 70%,#fff3c0,#ffb347 55%,rgba(255,120,40,0) 75%);animation:flick 1.2s ease-in-out infinite alternate}
+.host{min-height:3.4em;max-width:34em;text-align:center;font-size:17px;line-height:1.7}
+.host b{color:#d9b25a;font-weight:600}
+.eulogy{max-width:36em;width:100%;background:#ebe4d2;color:#2a241a;padding:18px 22px;border-radius:3px;white-space:pre-wrap;line-height:1.95;font-size:15px;max-height:46vh;overflow:auto;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.countdown{font-family:var(--font-brush);font-size:120px;line-height:1;color:#f2ede0}
+.coffin{position:relative;width:170px;height:290px;transition:transform 2.2s cubic-bezier(.5,0,.3,1),filter 2.2s}
+.coffin .cb,.coffin .ci,.coffin .lid{position:absolute;clip-path:polygon(18% 0,82% 0,100% 22%,86% 100%,14% 100%,0 22%)}
+.coffin .cb{inset:0;background:linear-gradient(90deg,#3a2414,#5c3b21 50%,#3a2414)}
+.coffin .ci{inset:9px;background:linear-gradient(#efe6d2,#d9ccb0);display:flex;justify-content:center;padding-top:40px}
+.coffin .ci .face{font-size:52px;filter:grayscale(1);line-height:1}
+.coffin .lid{inset:0;background:repeating-linear-gradient(90deg,#4a2d17 0 13px,#563620 13px 26px);transform:translateY(-150%);opacity:0;transition:transform 1.5s cubic-bezier(.5,0,.25,1),opacity .4s;display:grid;place-items:center;font-family:var(--font-brush);font-size:58px;color:#d9b25a}
+.coffin.closed .lid{transform:none;opacity:1}
+.coffin.buried{transform:scale(.35) translateY(40px);filter:brightness(.25)}
+.verdict{position:absolute;right:-70px;top:90px;border:4px solid #b8342a;color:#b8342a;font-family:var(--font-brush);font-size:26px;padding:6px 10px;line-height:1.15;text-align:center;background:rgba(235,228,210,.92);transform:rotate(-12deg) scale(2.4);opacity:0;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .2s}
+.verdict.in{transform:rotate(-12deg) scale(1);opacity:1}
+.verdict small{display:block;font-family:var(--font-body);font-size:11px;letter-spacing:.2em}
+.grave{position:relative;width:260px;height:300px;display:grid;place-items:center}
+.dirt{position:absolute;left:50%;bottom:40px;width:240px;height:90px;transform:translateX(-50%) scaleY(0);transform-origin:bottom;border-radius:50% 50% 12px 12px / 100% 100% 12px 12px;background:radial-gradient(ellipse at 50% 30%,#7a5d3b,#3f2f1c 75%);transition:transform 1.4s ease}
+.grave.filled .dirt{transform:translateX(-50%) scaleY(1)}
+.grave .newstone{position:absolute;bottom:110px;left:50%;transform:translateX(-50%) translateY(30px);opacity:0;transition:all .8s cubic-bezier(.2,1.4,.4,1)}
+.grave.filled .newstone{transform:translateX(-50%);opacity:1;transition-delay:1.2s}
+.bowcount{font-size:13px;color:#a6a192;letter-spacing:.3em}
+
+/* ---------- 棺材里 ---------- */
+.coffinview{position:relative;min-height:calc(100vh - 58px);display:grid;grid-template-columns:1fr 380px;background:#140b05;color:#ecdfc8;--ink-2:#1f1309;--bone:#ecdfc8;--bone-dim:#ab987b;--line:rgba(236,223,200,.14);--joss:#d9b25a;--wisp:#9fe8d4;color-scheme:dark}
+@media (max-width:800px){.coffinview{grid-template-columns:1fr}}
+.cv-box{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:70px 20px 40px;min-height:520px;background:repeating-linear-gradient(91deg,rgba(0,0,0,.2) 0 2px,transparent 2px 11px),repeating-linear-gradient(89deg,rgba(255,220,170,.03) 0 1px,transparent 1px 23px),linear-gradient(180deg,#3d2515,#24150b 55%,#160c06)}
+.cv-box.shake{animation:shake .4s}
+.crack{position:absolute;top:26px;left:18%;right:18%;height:2px;background:linear-gradient(90deg,transparent,#ffe7ad 30%,#fff6dc 50%,#ffe7ad 70%,transparent);box-shadow:0 0 22px 5px rgba(255,214,140,.35)}
+.beam{position:absolute;top:28px;left:28%;width:44%;height:70%;background:linear-gradient(180deg,rgba(255,225,160,.13),transparent 85%);clip-path:polygon(38% 0,62% 0,100% 100%,0 100%);pointer-events:none}
+.cv-night .crack{background:linear-gradient(90deg,transparent,#a9c6ff 40%,#e2ecff 50%,#a9c6ff 60%,transparent);box-shadow:0 0 22px 5px rgba(150,180,255,.3)}
+.cv-night .beam{background:linear-gradient(180deg,rgba(170,200,255,.12),transparent 85%)}
+.mote{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(255,236,190,.7);animation:mote 9s linear infinite}
+.cv-status{position:relative;text-align:center;max-width:30em}
+.cv-title{font-family:var(--font-brush);font-size:52px;line-height:1.1}
+.cv-sub{font-size:14px;color:var(--bone-dim);margin-top:6px;font-variant-numeric:tabular-nums}
+.cv-sub b{color:var(--bone);font-weight:600}
+.sleeper{position:relative;width:200px;height:120px;display:grid;place-items:center;transition:transform .6s}
+.sleeper .ghost-lie svg{width:100%;height:100%}
+.sleeper .ghost-lie{width:66px;height:80px;color:#efe9dc;transform:rotate(-90deg);filter:drop-shadow(0 0 12px rgba(255,230,180,.25))}
+.sleeper.flipped{transform:scaleY(-1)}
+.zzz{position:absolute;right:22px;top:4px;font-family:var(--font-brush);font-size:22px;color:var(--bone-dim);animation:zzz 3s ease-in-out infinite}
+.sleeper.flipped .zzz{transform:scaleY(-1)}
+.cv-actions{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.cv-stats{position:relative;font-size:12px;color:var(--bone-dim)}
+.cv-side{background:var(--ink-2);border-left:1px solid var(--line);padding:20px 18px;overflow:auto}
+@media (max-width:800px){.cv-side{border-left:0;border-top:1px solid var(--line)}}
+.cv-side h3{font-size:16px;display:flex;justify-content:space-between;align-items:baseline}
+.cv-side h3 span{font-size:12px;color:var(--bone-dim);font-weight:400}
+.cv-side .hint{font-size:12px;color:var(--bone-dim);margin:4px 0 14px}
+
+/* ---------- 化纸 ---------- */
+.burn{position:fixed;inset:0;z-index:80;background:rgba(6,4,3,.94);color:#f2e7cf;overflow:hidden;animation:fade .3s}
+.burn canvas{position:absolute;inset:0;width:100%;height:100%}
+.basin{position:absolute;left:50%;top:64%;width:230px;height:72px;margin-left:-115px;border-radius:0 0 115px 115px / 0 0 64px 64px;background:radial-gradient(ellipse at 50% 15%,#55432f,#1b140d 72%);box-shadow:inset 0 7px 0 #6a5236}
+.basin::before{content:"";position:absolute;left:-8px;right:-8px;top:-6px;height:12px;border-radius:50%;background:#2a2017;border:2px solid #6a5236}
+.fall{position:absolute;font-size:38px;line-height:1;will-change:transform}
+.burn-msg{position:absolute;top:18%;left:0;right:0;text-align:center;font-family:var(--font-brush);font-size:clamp(30px,6vw,46px)}
+.burn-sub{position:absolute;top:calc(18% + 64px);left:0;right:0;text-align:center;font-size:14px;color:#b8a888;padding:0 20px}
+
+/* ---------- 梦 ---------- */
+.dream{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px;background:#0a0814;color:#efe9ff;overflow:hidden;animation:fade .8s}
+.dream .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:drift 16s ease-in-out infinite alternate}
+.dream .card{position:relative;max-width:32em;text-align:center}
+.dream .kicker{font-size:13px;letter-spacing:.3em;color:rgba(239,233,255,.6)}
+.dream .txt{font-size:clamp(19px,3.2vw,25px);line-height:2;margin:22px 0}
+.dream .txt span{display:inline-block;opacity:0;filter:blur(12px);animation:focus 1.6s forwards}
+.dream .sig{font-size:14px;color:rgba(239,233,255,.7);opacity:0;animation:fade 1s forwards}
+.dream .lotto{margin-top:16px;font-family:var(--font-cyber);font-size:22px;letter-spacing:.2em;color:#b8ffd9;opacity:0;animation:fade 1s forwards}
+.dream .wake{margin-top:28px;opacity:0;animation:fade 1s forwards;color:#efe9ff;border-color:rgba(239,233,255,.3)}
+.dream.scary{background:#0d0303}
+.dream.scary .txt span{animation:focus 1.2s forwards,jitter .18s steps(2) infinite}
+.lid-top,.lid-bot{position:fixed;left:0;right:0;height:0;background:#000;z-index:91;transition:height 1.1s ease-in-out}
+.lid-top{top:0}.lid-bot{bottom:0}
+.lids-closed .lid-top,.lids-closed .lid-bot{height:50.5%}
+.sleeptxt{position:fixed;inset:0;z-index:92;display:grid;place-items:center;font-family:var(--font-brush);font-size:34px;color:#8d8aa0;pointer-events:none;opacity:0;transition:opacity .6s}
+.sleeptxt.in{opacity:1}
+
+#joss{position:fixed;inset:0;width:100%;height:100%;z-index:95;pointer-events:none}
+
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes smoke{0%{transform:translateY(6px) scaleX(.6);opacity:0}30%{opacity:.8}100%{transform:translateY(-26px) scaleX(1.6) translateX(6px);opacity:0}}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-5px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,1px)}80%{transform:translate(4px,-1px)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes flick{from{transform:scale(1,1)}to{transform:scale(.85,1.12) translateY(-1px)}}
+@keyframes zzz{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-8px);opacity:1}}
+@keyframes mote{from{transform:translateY(0) translateX(0)}to{transform:translateY(340px) translateX(30px);opacity:0}}
+@keyframes focus{to{opacity:1;filter:blur(0)}}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,-40px) scale(1.25)}}
+@keyframes jitter{0%{transform:translate(0)}100%{transform:translate(1px,-1px)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">电子墓地<small>先死为敬</small></div>
+  <div class="clock" id="clock"></div>
+  <div class="who" id="who"></div>
+  <div class="spacer"></div>
+  <span class="net" id="net">正在连接阴间服务器…</span>
+  <div class="acts" id="topacts"></div>
+</header>
+<main id="main">
+  <section class="scene" id="scene"><canvas id="bg"></canvas><div class="yard" id="yard"></div></section>
+  <section id="coffin" hidden></section>
+</main>
+<aside class="drawer" id="drawer" aria-label="墓碑详情"></aside>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<canvas id="joss"></canvas>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= 工具 ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem('ecem:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('ecem:' + k, JSON.stringify(v)); } catch {} }
+};
+const short = (s, n) => { const a = [...String(s || '')]; return a.length > n ? a.slice(0, n).join('') + '…' : a.join(''); };
+
+/* ================= 设定 ================= */
+const COLS = 6; // 墓址按 6 列编号：第几排第几号
+const FACES = ['😐', '🙂', '😎', '🥲', '🤡', '😴'];
+const STYLES = [
+  {k:'qingshi', name:'青石碑', note:'经典款，耐风化'},
+  {k:'hanbai', name:'汉白玉', note:'体面，显得有钱'},
+  {k:'neon', name:'赛博碑', note:'夜里会发光'},
+  {k:'tubao', name:'小土包', note:'朴素，环保'},
+  {k:'mupai', name:'木牌子', note:'随性，三年一换'},
+];
+const CAUSES = ['熬夜修仙失败', '被甲方气死', '笑死', '社死', '懒死', '穷死', '美死', '想太多', '等外卖饿死', '被 KPI 压死', '周一综合征'];
+const EPITAPHS = ['终于不用上班了', '勿扰，在睡', '我只是暂时离线', '已读不回，永久版', '这辈子先这样', '来都来了，烧点再走', '本人已下线，有事托梦', '生前没吃够，死后接着吃', '这里躺着一个本可以更努力的人', 'Wi-Fi 密码：先烧纸再说'];
+const SPECIAL = {0:'VIP 靠门位', 3:'风水宝地', 8:'学区墓', 14:'江景（看得见排水沟）', 20:'朝南 · 采光好', 27:'网红打卡位'};
+const ITEMS = [
+  {k:'mingbi', icon:'💴', name:'冥币', note:'天地银行 · 一亿面额', val:1},
+  {k:'yuanbao', icon:'💰', name:'金元宝', note:'锡箔折的，很亮', val:5},
+  {k:'xiang', icon:'🕯️', name:'香烛', note:'香火不断', val:0},
+  {k:'juhua', icon:'🌼', name:'菊花', note:'黄的白的都有', val:0},
+  {k:'naicha', icon:'🧋', name:'纸扎奶茶', note:'全糖去冰加珍珠', val:2},
+  {k:'phone', icon:'📱', name:'纸扎手机', note:'Pro Max，阴间 5G', val:20},
+  {k:'wifi', icon:'📶', name:'纸扎路由器', note:'地下信号不好', val:10},
+  {k:'qiuku', icon:'👖', name:'纸扎秋裤', note:'地下冷', val:3},
+  {k:'mao', icon:'🐈', name:'纸扎猫', note:'会自己铲屎', val:30},
+  {k:'car', icon:'🏎️', name:'纸扎跑车', note:'奈何桥不限速', val:200},
+  {k:'villa', icon:'🏯', name:'纸扎别墅', note:'带院子，学区房', val:500},
+  {k:'nianjia', icon:'🏖️', name:'纸扎年假', note:'阳间没休完的', val:100},
+  {k:'cizhi', icon:'✉️', name:'纸扎辞职信', note:'已替你交了', val:50},
+];
+const ITEM = Object.fromEntries(ITEMS.map(i => [i.k, i]));
+const DREAM_STYLES = [{k:'plain', name:'平常'}, {k:'warm', name:'温柔'}, {k:'scary', name:'吓人'}, {k:'mystic', name:'玄学'}];
+const NPCS = [
+  {id:'npc-laowang', code:'laowang', plot:5, name:'隔壁老王', birthYear:1971, cause:'被邻居误会', epitaph:'我真的只是来修水管的', style:'qingshi', portrait:1, diedAt:Date.UTC(2024,3,4), lastWords:'水管修好了', npc:true,
+   dreams:['钱收到了，谢谢。顺便说一句，你家水管确实该修了。', '梦里我又去修水管了，这次真的只是去修水管。', '东西收到，别跟别人说是我收的。']},
+  {id:'npc-coder', code:'coder', plot:11, name:'某程序员', birthYear:1994, cause:'周五下午发版', epitaph:'Hello World. Goodbye World.', style:'neon', portrait:0, diedAt:Date.UTC(2025,10,7), lastWords:'在我电脑上是好的', npc:true,
+   dreams:['收到。这边没有产品经理，需求从来不改。', '你烧的路由器连不上，DNS 有问题，我在查。', '记得给代码写注释。我就是因为没写才下来的。']},
+  {id:'npc-juan', code:'juanwang', plot:16, name:'卷王小李', birthYear:1999, cause:'卷死了', epitaph:'下辈子一定躺平', style:'hanbai', portrait:2, diedAt:Date.UTC(2025,5,30), lastWords:'再学五分钟', npc:true,
+   dreams:['收到。我已经在地府考上编制了，你呢？', '别烧纸了，烧点学习资料。', '你今天睡了几个小时？我已经不用睡了。']},
+  {id:'npc-wuming', code:'wuming', plot:22, name:'无名氏', birthYear:1900, cause:'不详', epitaph:'此处无人，请勿烧纸', style:'tubao', portrait:5, diedAt:Date.UTC(1999,0,1), lastWords:'', npc:true,
+   dreams:['……谁？', '说了没人。东西我先替没人收着。', '（梦里只有一阵风）']},
+  {id:'npc-afei', code:'afei', plot:25, name:'吃货阿肥', birthYear:1990, cause:'自助餐回本未遂', epitaph:'这顿我请', style:'mupai', portrait:3, diedAt:Date.UTC(2023,7,15), lastWords:'再来一盘', npc:true,
+   dreams:['奶茶收到，下次少冰。', '这边自助餐不限时，我终于回本了。', '你瘦了，多吃点。']},
+];
+const ADJ = ['平凡而又伟大', '拖延而又坚持', '努力搞钱但钱没搞到', '积极发朋友圈', '早睡失败', '间歇性踌躇满志'];
+const ADJ2 = ['与闹钟斗争', '认真生活偶尔摆烂', '默默点赞', '从不迟到太久', '和自己和解又反悔', '持续性混吃等死'];
+const ACHV = ['曾连续三天按时起床', '收藏了三千篇从没打开过的文章', '在群里抢到过 8.88 元红包', '坚持健身整整一周', '办过一张从没用过的游泳卡', '把一盆绿萝养活了两年'];
+const ACHV2 = ['回复过无数个“收到”', '给身边的人点过很多次外卖', '从未在猜拳中赢过', '一直记得朋友的生日（大部分）', '是好几个群里最后一个说晚安的人', '给很多人带来过快乐，主要靠笑话本人'];
+const CATEG = ['意外中的必然', '慢性累积型', '工伤（待认定）', '可以理解的那种', '当代常见病'];
+const LASTACT = ['把购物车清空了', '手机还剩 17% 的电', '刚点的外卖还没送到', '回复了最后一个“好的”', '给猫加满了粮', '没关电脑上的 38 个标签页'];
+const EFFECT = ['使公司群未读消息减少了 99+', '让外卖小哥少了一位老客户', '令全部待办事项永久归档', '让家里的 Wi-Fi 少了一台设备', '使闹钟终于得到了休息'];
+const WISH = ['不用打卡', 'Wi-Fi 满格', '天天睡到自然醒', '再也不用回消息', '顿顿有人请客', '永远不用开会'];
+const VERDICTS = ['此人尚可', '已经尽力', '情有可原', '活得挺好', '功过相抵', '下辈子早睡', '属实不易'];
+const COUPLETS = [['一生勤恳熬夜', '两眼一闭安息', '提前下班'], ['生前待办未了', '死后统一归档', '永不打卡'], ['在世时常说忙', '离开后终于闲', '已读不回']];
+const GHOST_SVG = '<svg viewBox="0 0 60 72" aria-hidden="true"><path d="M30 3C15.5 3 7 14.5 7 30v36l7.6-6 7.6 6 7.8-6 7.8 6 7.6-6L53 66V30C53 14.5 44.5 3 30 3z" fill="currentColor"/><ellipse cx="22" cy="29" rx="3.6" ry="5.2" fill="#10141a"/><ellipse cx="38" cy="29" rx="3.6" ry="5.2" fill="#10141a"/><ellipse cx="30" cy="42" rx="4.2" ry="3" fill="#10141a" opacity=".75"/></svg>';
+
+/* ================= 时间 ================= */
+const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+const shichen = d => SHICHEN[Math.floor(((d.getHours() + 1) % 24) / 2)] + '时';
+const isNightAt = d => { const h = d.getHours(); return h >= 18 || h < 6; };
+const untilNight = d => { const t = new Date(d); t.setHours(18, 0, 0, 0); return Math.max(0, t - d); };
+const hhmm = d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+const fmtDur = ms => { const m = Math.ceil(ms / 60000); const h = Math.floor(m / 60); return h ? `${h} 小时 ${m % 60} 分` : `${m} 分钟`; };
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const CN = '〇一二三四五六七八九';
+const cnYear = y => String(y).split('').map(c => CN[+c] ?? c).join('');
+const cnN = n => n <= 10 ? (n === 10 ? '十' : CN[n]) : n < 20 ? '十' + (n % 10 ? CN[n % 10] : '') : CN[Math.floor(n / 10)] + '十' + (n % 10 ? CN[n % 10] : '');
+const cnDate = ms => { const d = new Date(ms); return `${cnYear(d.getFullYear())}年${cnN(d.getMonth() + 1)}月${cnN(d.getDate())}日`; };
+const ymd = ms => { const d = new Date(ms); return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`; };
+function ago(ms) {
+  const s = (Date.now() - ms) / 1000;
+  if (s < 60) return '刚刚';
+  if (s < 3600) return Math.floor(s / 60) + ' 分钟前';
+  if (s < 86400) return Math.floor(s / 3600) + ' 小时前';
+  if (s < 86400 * 30) return Math.floor(s / 86400) + ' 天前';
+  return ymd(ms);
+}
+const address = p => `第 ${Math.floor(p / COLS) + 1} 排第 ${p % COLS + 1} 号`;
+
+/* ================= 状态 ================= */
+const S = {
+  store: null, local: false, ready: false, uid: null, canWrite: null, user: null, room: null,
+  tombs: [], burns: [], npcBurns: LS.get('npcBurns', []),
+  myTomb: null, openTomb: null, ghostPlot: null, pref: 'cemetery', view: 'cemetery',
+  peers: [], flipped: false, sound: LS.get('sound', true), layout: null,
+  firstBurns: true, knownBurns: new Set(), knownReplies: new Set(), netNote: '',
+  pendingHash: null, stateKey: '',
+};
+
+/* ================= 数据层：共享库 / 单机 ================= */
+function makeDbStore(db) {
+  const tombsCol = db.collection('tombs');
+  const burnsCol = db.collection('burns');
+  const list = snap => snap.docs.map(d => ({id: d.id, ...d.data()}));
+  return {
+    watchTombs: (cb, err) => tombsCol.onSnapshot(s => cb(list(s), s.metadata), err),
+    watchBurns: (cb, err) => burnsCol.orderBy('at', 'desc').limit(800).onSnapshot(s => cb(list(s), s.metadata), err),
+    setTomb: (id, data) => db.doc('tombs/' + id).set(data),
+    updateTomb: (id, patch) => db.doc('tombs/' + id).update(patch),
+    addBurn: data => burnsCol.add(data),
+    updateBurn: (id, patch) => db.doc('burns/' + id).update(patch),
+  };
+}
+function makeLocalStore() {
+  const data = LS.get('localdb', {tombs: {}, burns: {}});
+  const subs = {t: new Set(), b: new Set()};
+  const meta = {fromCache: false, hasPendingWrites: false};
+  const emit = () => {
+    const tombs = Object.entries(data.tombs).map(([id, d]) => ({id, ...d}));
+    const burns = Object.entries(data.burns).map(([id, d]) => ({id, ...d})).sort((a, b) => b.at - a.at);
+    subs.t.forEach(f => f(tombs, meta)); subs.b.forEach(f => f(burns, meta));
+  };
+  const save = () => { LS.set('localdb', data); setTimeout(emit, 0); };
+  return {
+    watchTombs(cb) { subs.t.add(cb); setTimeout(emit, 0); return () => subs.t.delete(cb); },
+    watchBurns(cb) { subs.b.add(cb); setTimeout(emit, 0); return () => subs.b.delete(cb); },
+    async setTomb(id, d) { data.tombs[id] = JSON.parse(JSON.stringify(d)); save(); },
+    async updateTomb(id, p) { Object.assign(data.tombs[id], p); save(); },
+    async addBurn(d) { data.burns['b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)] = d; save(); },
+    async updateBurn(id, p) { Object.assign(data.burns[id], p); save(); },
+  };
+}
+
+/* ================= 声音（WebAudio 合成，不加载外部文件） ================= */
+const Sound = (() => {
+  let ctx = null, master = null, verb = null;
+  function ac() {
+    if (!S.sound) return null;
+    try {
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain(); master.gain.value = .55; master.connect(ctx.destination);
+        const d = ctx.createDelay(); d.delayTime.value = .27;
+        const fb = ctx.createGain(); fb.gain.value = .32;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800;
+        d.connect(fb); fb.connect(lp); lp.connect(d); d.connect(master);
+        verb = d;
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    } catch { return null; }
+  }
+  function tone(f, t0, dur, {type = 'sine', gain = .2, wet = true, slide = 0} = {}) {
+    const c = ac(); if (!c) return;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    o.connect(g); g.connect(master); if (wet) g.connect(verb);
+    o.start(t0); o.stop(t0 + dur + .05);
+  }
+  function noise(t0, dur, {freq = 300, q = 1, gain = .3} = {}) {
+    const c = ac(); if (!c) return;
+    const len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), ch = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = buf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q; g.gain.value = gain;
+    s.connect(f); f.connect(g); g.connect(master); s.start(t0);
+  }
+  let dirgeTimer = null;
+  return {
+    knock() { const c = ac(); if (!c) return; const t = c.currentTime; [0, .2, .4].forEach(d => { tone(110, t + d, .18, {gain: .5, wet: false, slide: 70}); noise(t + d, .08, {freq: 260, q: 2, gain: .5}); }); },
+    gong() { const c = ac(); if (!c) return; const t = c.currentTime; [[98, .35], [196, .12], [294, .06], [415, .04]].forEach(([f, g]) => tone(f, t, 4, {gain: g})); },
+    muyu() { const c = ac(); if (!c) return; tone(760, c.currentTime, .16, {gain: .35, slide: 420}); },
+    bell() { const c = ac(); if (!c) return; const t = c.currentTime; tone(880, t, 2.6, {gain: .12}); tone(1318, t + .02, 2.2, {gain: .07}); tone(1760, t + .5, 2, {gain: .05}); },
+    crackle(sec = 3) { const c = ac(); if (!c) return; const t = c.currentTime; noise(t, sec, {freq: 900, q: .4, gain: .12}); for (let i = 0; i < sec * 14; i++) noise(t + Math.random() * sec, .02, {freq: 1500 + Math.random() * 2500, q: 3, gain: .35}); },
+    whoosh() { const c = ac(); if (!c) return; noise(c.currentTime, 1.2, {freq: 500, q: .5, gain: .25}); },
+    dirge() {
+      this.stop(); const c = ac(); if (!c) return;
+      // 自写的五声小调慢板
+      const A3 = 220, mel = [[A3, 1.2], [261.6, .8], [293.7, 1.2], [329.6, 1.6], [293.7, .8], [261.6, .8], [A3, 1.6], [196, 1.2], [220, 2.4], [261.6, 1.2], [329.6, .8], [392, 1.2], [329.6, 1.6], [293.7, .8], [261.6, 1.2], [A3, 2.8]];
+      let i = 0;
+      const step = () => {
+        const cc = ac(); if (!cc) return;
+        const [f, d] = mel[i % mel.length];
+        tone(f, cc.currentTime, d * 1.25, {type: 'triangle', gain: .13});
+        if (i % 4 === 0) tone(110, cc.currentTime, 3.2, {gain: .07});
+        i++; dirgeTimer = setTimeout(step, d * 1000);
+      };
+      step();
+    },
+    stop() { clearTimeout(dirgeTimer); dirgeTimer = null; },
+  };
+})();
+
+/* ================= 背景：夜空、月亮、雾、鬼火 ================= */
+const BG = (() => {
+  let cv, ctx, w = 0, h = 0, lastSig = '', horizon = 260, stars = [], wisps = [], fogs = [], hills = [], trees = [], raf = 0, lastT = 0;
+  function init(c) {
+    cv = c; ctx = cv.getContext('2d');
+    new ResizeObserver(relayout).observe(cv.parentElement);
+    relayout();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
+  }
+  function relayout() {
+    if (!cv) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    w = cv.parentElement.clientWidth; h = cv.parentElement.clientHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const g = $('#grid');
+    const hz = g ? clamp(g.getBoundingClientRect().top - cv.getBoundingClientRect().top - 16, 120, h - 60) : 260;
+    const sig = `${w}|${h}|${Math.round(hz)}`;
+    if (sig === lastSig) { kick(); return; }
+    lastSig = sig; horizon = hz;
+    stars = Array.from({length: Math.round(w / 9)}, () => ({x: Math.random() * w, y: Math.random() * (horizon - 30), r: Math.random() * 1.2 + .2, p: Math.random() * 6}));
+    wisps = Array.from({length: Math.max(6, Math.round(w / 130))}, () => newWisp(true));
+    fogs = Array.from({length: 5}, (_, i) => ({x: Math.random() * w, y: horizon + 30 + i * (h - horizon) / 5, rx: 260 + Math.random() * 260, ry: 26 + Math.random() * 24, v: .08 + Math.random() * .16}));
+    hills = []; for (let x = 0; x <= w + 40; x += 40) hills.push(horizon - 14 - Math.sin(x / 170) * 12 - Math.sin(x / 61) * 5);
+    trees = []; for (let x = 10; x < w; x += 50 + Math.random() * 120) if (x < w * .3 || x > w * .7 || Math.random() < .3) trees.push({x, hgt: 40 + Math.random() * 46, wd: 9 + Math.random() * 8});
+    kick();
+  }
+  function newWisp(any) { return {x: Math.random() * w, y: any ? horizon + Math.random() * (h - horizon) : h + 20, vy: -(.15 + Math.random() * .35), vx: (Math.random() - .5) * .3, r: 5 + Math.random() * 7, p: Math.random() * 6, life: 0}; }
+  function kick() { cancelAnimationFrame(raf); if (REDUCED) draw(0); else raf = requestAnimationFrame(loop); }
+  function loop(t) {
+    if (document.hidden || !cv.isConnected || $('#scene').hidden) { raf = 0; return; }
+    if (t - lastT > 33) { draw(t); lastT = t; }
+    raf = requestAnimationFrame(loop);
+  }
+  function draw(t) {
+    const night = !document.body.classList.contains('day');
+    ctx.clearRect(0, 0, w, h);
+    let g = ctx.createLinearGradient(0, 0, 0, horizon);
+    if (night) { g.addColorStop(0, '#060912'); g.addColorStop(1, '#162032'); } else { g.addColorStop(0, '#dde1da'); g.addColorStop(1, '#c4cac2'); }
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, horizon);
+    g = ctx.createLinearGradient(0, horizon, 0, h);
+    if (night) { g.addColorStop(0, '#10161a'); g.addColorStop(1, '#090c0e'); } else { g.addColorStop(0, '#bfc5bb'); g.addColorStop(1, '#c9cdc5'); }
+    ctx.fillStyle = g; ctx.fillRect(0, horizon, w, h - horizon);
+    if (night) {
+      for (const s of stars) { ctx.globalAlpha = .35 + .5 * Math.abs(Math.sin(t / 1400 + s.p)); ctx.fillStyle = '#e8eefc'; ctx.fillRect(s.x, s.y, s.r, s.r); }
+      ctx.globalAlpha = 1;
+      const mx = w * .84, my = Math.min(80, horizon * .35);
+      const halo = ctx.createRadialGradient(mx, my, 10, mx, my, 110); halo.addColorStop(0, 'rgba(230,236,255,.35)'); halo.addColorStop(1, 'rgba(230,236,255,0)');
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(mx, my, 110, 0, 7); ctx.fill();
+      ctx.fillStyle = '#eef0f6'; ctx.beginPath(); ctx.arc(mx, my, 24, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(160,170,190,.35)'; ctx.beginPath(); ctx.arc(mx - 7, my - 4, 5, 0, 7); ctx.arc(mx + 8, my + 7, 3.5, 0, 7); ctx.fill();
+    } else {
+      const sx = w * .18, sy = Math.min(70, horizon * .3);
+      const sun = ctx.createRadialGradient(sx, sy, 4, sx, sy, 120); sun.addColorStop(0, 'rgba(255,253,240,.9)'); sun.addColorStop(.25, 'rgba(255,250,230,.35)'); sun.addColorStop(1, 'rgba(255,250,230,0)');
+      ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(sx, sy, 120, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = night ? '#0c1118' : '#a9b0a6';
+    ctx.beginPath(); ctx.moveTo(0, horizon + 2); hills.forEach((y, i) => ctx.lineTo(i * 40, y)); ctx.lineTo(w, horizon + 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = night ? '#080b10' : '#8f978c';
+    for (const tr of trees) { ctx.beginPath(); ctx.ellipse(tr.x, horizon - tr.hgt / 2 + 4, tr.wd, tr.hgt / 2, 0, 0, 7); ctx.fill(); ctx.fillRect(tr.x - 1, horizon - 4, 2, 8); }
+    for (const f of fogs) {
+      f.x += REDUCED ? 0 : f.v; if (f.x - f.rx > w) f.x = -f.rx;
+      const fg = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.rx);
+      fg.addColorStop(0, night ? 'rgba(160,180,190,.07)' : 'rgba(255,255,255,.28)'); fg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.save(); ctx.translate(f.x, f.y); ctx.scale(1, f.ry / f.rx); ctx.translate(-f.x, -f.y);
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(f.x, f.y, f.rx, 0, 7); ctx.fill(); ctx.restore();
+    }
+    if (night) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < wisps.length; i++) {
+        const p = wisps[i];
+        if (!REDUCED) { p.x += p.vx + Math.sin(t / 900 + p.p) * .25; p.y += p.vy; p.life++; }
+        if (p.y < horizon - 10) wisps[i] = newWisp(false);
+        const a = (.35 + .35 * Math.sin(t / 300 + p.p)) * clamp((p.y - horizon) / 60, 0, 1);
+        const rg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
+        rg.addColorStop(0, `rgba(190,255,235,${a})`); rg.addColorStop(.35, `rgba(120,230,200,${a * .5})`); rg.addColorStop(1, 'rgba(80,200,170,0)');
+        ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3, 0, 7); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+  return {init, relayout, kick};
+})();
+
+/* ================= 纸钱雨（圆形方孔） ================= */
+const Joss = (() => {
+  const cv = $('#joss'), ctx = cv.getContext('2d'); let parts = [], raf = 0;
+  function size() { const d = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * d; cv.height = innerHeight * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+  function burst(n = 70) {
+    if (REDUCED) return; size();
+    for (let i = 0; i < n; i++) parts.push({x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * .6, vy: 1.8 + Math.random() * 1.8, sw: Math.random() * 6, r: 8 + Math.random() * 7, rot: Math.random() * 6, vr: (Math.random() - .5) * .08, flip: Math.random() * 6});
+    if (!raf) raf = requestAnimationFrame(loop);
+  }
+  function loop(t) {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.y < innerHeight + 30);
+    for (const p of parts) {
+      p.y += p.vy; p.x += Math.sin(t / 600 + p.sw) * .8; p.rot += p.vr;
+      const sx = Math.abs(Math.cos(t / 400 + p.flip));
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(Math.max(.15, sx), 1);
+      ctx.fillStyle = '#e2c27a'; ctx.strokeStyle = 'rgba(140,100,30,.6)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 7); ctx.rect(p.r * .32, -p.r * .32, -p.r * .64, p.r * .64); ctx.fill('evenodd'); ctx.stroke();
+      ctx.restore();
+    }
+    if (parts.length) raf = requestAnimationFrame(loop); else { raf = 0; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+  }
+  addEventListener('resize', () => { if (raf) size(); });
+  return {burst};
+})();
+
+/* ================= 衍生数据 ================= */
+const allTombs = () => [...NPCS, ...S.tombs];
+const getTomb = id => allTombs().find(t => t.id === id) || null;
+const burnsFor = t => t.npc ? S.npcBurns.filter(b => b.to === t.id) : S.burns.filter(b => b.to === t.id);
+const burnsToMe = () => S.uid ? S.burns.filter(b => b.to === S.uid) : [];
+function myDreams() {
+  const sent = [...S.burns.filter(b => S.uid && b.from === S.uid), ...S.npcBurns].sort((a, b) => b.at - a.at);
+  const seen = new Set(LS.get('seenDreams', []));
+  const replied = sent.filter(b => b.reply && b.reply.text);
+  return {sent, replied, unread: replied.filter(b => !seen.has(b.id)).length};
+}
+function itemTotals(burns) {
+  const tot = {};
+  for (const b of burns) for (const [k, n] of Object.entries(b.items || {})) if (ITEM[k]) tot[k] = (tot[k] || 0) + (+n || 0);
+  return tot;
+}
+const itemsText = items => Object.entries(items || {}).filter(([k, n]) => ITEM[k] && n > 0).map(([k, n]) => `${ITEM[k].name}×${n}`).join('、') || '一点心意';
+const ghostOut = () => !!S.myTomb && (isNightAt(new Date()) || Date.now() < (S.myTomb.zhashiUntil || 0));
+const zhashiActive = () => !!S.myTomb && !isNightAt(new Date()) && Date.now() < (S.myTomb.zhashiUntil || 0);
+const canBurn = t => t.npc || (!!S.store && !!S.uid && S.canWrite !== false);
+function layoutPlots() {
+  const map = new Map(), placed = new Map();
+  NPCS.forEach(n => { map.set(n.plot, n); placed.set(n.id, n.plot); });
+  const tombs = [...S.tombs].sort((a, b) => (a.diedAt || 0) - (b.diedAt || 0));
+  for (const t of tombs) {
+    let p = Number.isInteger(t.plot) && t.plot >= 0 && t.plot < 2000 ? t.plot : 0;
+    while (map.has(p)) p++;
+    map.set(p, t); placed.set(t.id, p);
+  }
+  const used = Math.max(-1, ...map.keys());
+  const total = Math.max(30, Math.ceil((Math.max(used + 1, map.size + 6)) / COLS) * COLS + (used + 1 > 24 ? COLS : 0));
+  return {map, placed, total};
+}
+
+/* ================= 小组件 ================= */
+const portraitHTML = (t, big) => `<span class="portrait${big ? ' big' : ''}"><span class="face">${FACES[t.portrait || 0] || FACES[0]}</span></span>`;
+function stoneMini(t) {
+  const st = STYLES.some(s => s.k === t.style) ? t.style : 'qingshi';
+  const nm = esc(short(t.name, st === 'mupai' || st === 'tubao' ? 4 : 5));
+  if (st === 'tubao') return `<span class="stone s-tubao"><span class="stake"><span class="vt">${nm}</span></span></span>`;
+  return `<span class="stone s-${st}"><span class="vt">${nm}</span></span>`;
+}
+const fsMain = n => { const k = [...String(n || '')].length + 2; return k <= 5 ? 30 : k <= 6 ? 26 : k <= 8 ? 21 : 17; };
+function stoneBig(t) {
+  const st = STYLES.some(s => s.k === t.style) ? t.style : 'qingshi';
+  return `<div class="bigstone s-${st}" id="bigstone">${portraitHTML(t)}<div class="bs-cols"><span class="vt bs-side">生于${cnYear(t.birthYear || 2000)}年</span><span class="vt bs-main" style="font-size:${fsMain(t.name)}px">${esc(t.name)}之墓</span><span class="vt bs-side">${cnDate(t.diedAt || Date.now())}立</span></div></div>`;
+}
+const ghostEl = (cls, tag) => `<div class="ghost ${cls}">${GHOST_SVG}<span class="tag">${esc(tag)}</span></div>`;
+
+/* ================= toast / 弹窗 ================= */
+function toast(html, {btn, onBtn, err, ms = 4200} = {}) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (err ? ' err' : '');
+  el.innerHTML = `<span>${html}</span>${btn ? `<button class="btn">${esc(btn)}</button>` : ''}`;
+  if (btn) el.querySelector('button').onclick = () => { el.remove(); onBtn && onBtn(); };
+  $('#toasts').append(el);
+  setTimeout(() => el.remove(), btn ? ms + 3000 : ms);
+}
+let modalEl = null;
+function openModal(html, mount) {
+  closeModal();
+  modalEl = document.createElement('div');
+  modalEl.className = 'modal-back';
+  modalEl.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button class="x" data-close aria-label="关闭">✕</button>${html}</div>`;
+  modalEl.addEventListener('click', e => { if (e.target === modalEl || e.target.closest('[data-close]')) closeModal(); });
+  document.body.append(modalEl);
+  mount && mount(modalEl.querySelector('.modal'));
+  const f = modalEl.querySelector('textarea, input'); if (f) setTimeout(() => f.focus(), 30);
+}
+function closeModal() { if (modalEl) { modalEl.remove(); modalEl = null; } }
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg || '已复制'); }
+  catch { toast('浏览器不让复制，请手动选中上面的文字复制', {err: true}); }
+}
+
+/* ================= 顶栏 ================= */
+function renderHeader() {
+  const now = new Date(), night = isNightAt(now);
+  $('#clock').innerHTML = `<b>${shichen(now)}</b><span>${hhmm(now)}</span><span>${night ? '夜 · 阴气重' : '昼 · 阳气旺'}</span>`;
+  $('#who').innerHTML = S.myTomb ? `亡魂 · <b>${esc(S.myTomb.name)}</b>` : (S.ready ? '活人' : '');
+  const acts = [];
+  if (S.myTomb) {
+    const pending = burnsToMe().filter(b => !b.reply).length;
+    acts.push(`<button class="btn" data-act="inbox">香火簿${pending ? ` <span class="badge">${pending}</span>` : ''}</button>`);
+  } else {
+    acts.push(`<button class="btn primary" data-act="funeral" ${S.ready ? '' : 'disabled'}>办葬礼</button>`);
+  }
+  const d = myDreams();
+  if (d.sent.length) acts.push(`<button class="btn" data-act="dreams">我的梦${d.unread ? ` <span class="badge">${d.unread}</span>` : ''}</button>`);
+  acts.push(`<button class="btn quiet" data-act="sound" aria-pressed="${S.sound}">${S.sound ? '声音：开' : '声音：关'}</button>`);
+  $('#topacts').innerHTML = acts.join('');
+  $('#net').textContent = S.netNote;
+}
+
+/* ================= 视图切换 ================= */
+function applyDayClass() { document.body.classList.toggle('day', !isNightAt(new Date())); }
+function renderView() {
+  applyDayClass();
+  if (S.myTomb && !ghostOut()) S.pref = 'coffin';
+  const v = S.myTomb && S.pref === 'coffin' ? 'coffin' : 'cemetery';
+  S.view = v;
+  $('#scene').hidden = v !== 'cemetery';
+  $('#coffin').hidden = v !== 'coffin';
+  if (v === 'coffin') { closeDrawer(true); renderCoffin(); } else { renderYard(); BG.kick(); }
+  renderHeader();
+  pushPresence();
+}
+function renderAll() { renderView(); if (S.openTomb) renderDrawer(); }
+
+/* ================= 墓园 ================= */
+function renderYard() {
+  const L = layoutPlots(); S.layout = L;
+  const out = ghostOut();
+  let top = '';
+  if (!S.myTomb) {
+    top = `<section class="hero"><h1>先死<span>为敬</span></h1>
+      <p>在这里给自己提前办一场葬礼。之后亲友来坟前烧纸、留话；你<b>白天躺在棺材里</b>，<b>天黑出来溜达</b>，看看谁来过，再<b>托个梦</b>回去。</p>
+      <div class="row"><button class="btn primary" data-act="funeral" ${S.ready ? '' : 'disabled'}>办一场我的葬礼</button><button class="btn" data-act="scrollyard">我是活人，来扫墓</button></div></section>`;
+  } else if (out) {
+    const myPlot = L.placed.get(S.uid);
+    top = `<div class="ghostbar"><span class="gb-t">${zhashiActive() ? '诈尸中' : '夜游中'}</span>
+      <span class="gb-d">方向键或点墓碑移动，走到别人坟前可以串门烧纸。你的坟在${address(myPlot ?? 0)}。</span>
+      ${zhashiActive() ? `<span class="zs">诈尸中 · 阳气灼烧 · 还剩 <span id="zsleft">${mmss(S.myTomb.zhashiUntil - Date.now())}</span></span>` : ''}
+      <span class="acts"><button class="btn sm" data-act="gomine">回我的坟</button><button class="btn sm" data-act="invite">邀请烧纸</button><button class="btn sm" data-act="sleep">回棺材</button></span></div>`;
+  }
+  const living = S.peers.filter(p => p.presence && p.presence.mode === 'living' && !p.sameTab).length;
+  const ghosts = S.peers.filter(p => p.presence && p.presence.mode === 'ghost' && !p.sameTab).length;
+  const meta = `<div class="yard-meta"><span>新坟 <b>${S.tombs.length}</b> 座</span><span>原住民 <b>${NPCS.length}</b> 位</span><span>香火 <b>${S.burns.length + S.npcBurns.length}</b> 次</span>${S.room ? `<span>此刻在场：活人 <b>${living}</b> · 鬼 <b>${ghosts}</b></span>` : ''}</div>`;
+  const local = S.local ? `<div class="localnote">单机模式：没连上共享的阴间服务器，坟和纸钱只存在这个浏览器里，别人看不到。</div>` : '';
+  let plots = '';
+  const dayAgo = Date.now() - 86400000;
+  for (let i = 0; i < L.total; i++) {
+    const t = L.map.get(i);
+    if (!t) { const sp = SPECIAL[i]; plots += `<button class="plot empty" data-plot="${i}" aria-label="${esc(address(i))}，空位${sp ? '，' + esc(sp) : ''}"><span class="hole"></span><span class="plabel${sp ? ' sp' : ''}">${sp ? esc(sp) : '空位'}</span></button>`; continue; }
+    const hot = burnsFor(t).some(b => b.at > dayAgo);
+    plots += `<button class="plot${hot ? ' hot' : ''}${t.id === S.uid ? ' mine' : ''}" data-plot="${i}" data-tomb="${esc(t.id)}" aria-label="${esc(t.name)}之墓，${esc(address(i))}"><span class="mound"></span>${stoneMini(t)}<span class="pname">${esc(t.name)}</span><span class="psub">${t.npc ? '原住民 · ' : ''}${esc(t.cause || '')}</span></button>`;
+  }
+  $('#yard').innerHTML = `${top}${local}${meta}<div class="grid" id="grid">${plots}</div>`;
+  const grid = $('#grid');
+  if (S.myTomb && out) {
+    if (S.ghostPlot == null || S.ghostPlot >= L.total) S.ghostPlot = L.placed.get(S.uid) ?? 0;
+    grid.insertAdjacentHTML('beforeend', ghostEl('me noanim', '我'));
+  }
+  renderPeers();
+  positionGhosts();
+  requestAnimationFrame(() => { const g = $('.ghost.me'); if (g) g.classList.remove('noanim'); });
+  BG.relayout();
+}
+function plotPos(p) {
+  const el = $(`#grid [data-plot="${p}"]`); if (!el) return null;
+  return {x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + 2};
+}
+function positionGhosts() {
+  const me = $('.ghost.me');
+  if (me) { const pos = plotPos(S.ghostPlot); if (pos) me.style.transform = `translate(${pos.x}px,${pos.y}px)`; }
+  $$('.ghost.peer').forEach(g => { const pos = plotPos(+g.dataset.plot); if (pos) g.style.transform = `translate(${pos.x}px,${pos.y + 10}px)`; });
+}
+function renderPeers() {
+  const grid = $('#grid'); if (!grid) return;
+  $$('.ghost.peer', grid).forEach(e => e.remove());
+  for (const p of S.peers) {
+    const pr = p.presence || {};
+    if (p.sameTab || pr.mode !== 'ghost' || !Number.isInteger(pr.plot)) continue;
+    const t = getTomb(p.by) || getTomb(pr.uid);
+    const div = document.createElement('div');
+    div.innerHTML = ghostEl('peer', t ? t.name : '游魂');
+    const g = div.firstElementChild; g.dataset.plot = pr.plot; grid.append(g);
+  }
+  positionGhosts();
+}
+const setTopH = () => document.documentElement.style.setProperty('--toph', $('.top').offsetHeight + 'px');
+addEventListener('resize', () => { positionGhosts(); setTopH(); });
+new ResizeObserver(setTopH).observe($('.top'));
+function moveGhost(p) {
+  if (!S.layout) return;
+  S.ghostPlot = clamp(p, 0, S.layout.total - 1);
+  positionGhosts(); pushPresence();
+  const el = $(`#grid [data-plot="${S.ghostPlot}"]`);
+  if (el) el.scrollIntoView({block: 'nearest', behavior: REDUCED ? 'auto' : 'smooth'});
+}
+function gridCols() { const g = $('#grid'); return g ? getComputedStyle(g).gridTemplateColumns.split(' ').length : COLS; }
+
+/* ================= 抽屉：墓碑 ================= */
+function openTomb(id) {
+  S.openTomb = id; renderDrawer();
+  const t = getTomb(id);
+  if (t && t.code && location.hash !== '#tomb-' + t.code) { try { location.hash = 'tomb-' + t.code; } catch {} }
+  pushPresence();
+}
+function closeDrawer(silent) {
+  S.openTomb = null; $('#drawer').classList.remove('open');
+  if (!silent && location.hash.startsWith('#tomb-')) { try { location.hash = 'yard'; } catch {} }
+  pushPresence();
+}
+function renderDrawer() {
+  const d = $('#drawer'); const t = getTomb(S.openTomb);
+  if (!t) { d.classList.remove('open'); return; }
+  const own = !!S.uid && t.id === S.uid;
+  const bs = burnsFor(t), tot = itemTotals(bs);
+  const plot = S.layout ? S.layout.placed.get(t.id) : t.plot;
+  const age = new Date(t.diedAt || Date.now()).getFullYear() - (t.birthYear || 2000);
+  const out = ghostOut();
+  const chips = Object.entries(tot).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<span class="oc">${ITEM[k].icon} ${esc(ITEM[k].name)} ×${n}</span>`).join('');
+  const marks = [];
+  if (t.zhashiCount) marks.push(`该鬼曾白天诈尸 ${t.zhashiCount} 次`);
+  if (t.knockCount) marks.push(`棺材板被敲响 ${t.knockCount} 次`);
+  if (t.funerals > 1) marks.push(`办过 ${t.funerals} 次葬礼`);
+  let acts = '', why = '';
+  if (own) {
+    acts = `<button class="btn primary" data-act="inbox">香火簿 · ${bs.length} 次</button>
+      <button class="btn" data-act="epitaph" ${out ? '' : 'disabled'}>改碑文</button>
+      <button class="btn" data-act="burn" data-id="${esc(t.id)}">给自己烧点</button>
+      <button class="btn" data-act="invite">邀请烧纸</button>
+      <button class="btn quiet" data-act="refuneral">重办葬礼</button>`;
+    if (!out) why = '白天出不去，改碑文要等天黑（或者诈尸）。';
+  } else {
+    const ok = canBurn(t);
+    acts = `<button class="btn primary" data-act="burn" data-id="${esc(t.id)}" ${ok ? '' : 'disabled'}>${S.myTomb ? '串门 · 烧纸' : '烧纸'}</button>`;
+    if (!ok) why = !S.store ? '还没连上阴间服务器。' : !S.uid ? '你没有登录身份，烧不了纸。' : '你在这个页面只有查看权限，烧不了纸。请页面主人把你设为协作者（Contributor）。';
+  }
+  d.innerHTML = `<div class="dr-head"><span>${t.npc ? '原住民' : own ? '我的坟' : '新坟'} · ${address(plot ?? 0)}</span><button class="x" data-act="closedrawer" aria-label="关闭">✕</button></div>
+    ${stoneBig(t)}
+    <dl class="facts"><dt>死因</dt><dd>${esc(t.cause || '不详')}</dd><dt>享年</dt><dd>${age} 岁</dd><dt>下葬</dt><dd>${ymd(t.diedAt || Date.now())}</dd>${t.lastWords ? `<dt>遗言</dt><dd>“${esc(t.lastWords)}”</dd>` : ''}</dl>
+    <div class="block"><div class="lbl">墓志铭</div><p class="ep-text">${esc(t.epitaph || '（空白）')}</p>${t.epitaphEdits ? `<div class="note">碑文半夜改过 ${t.epitaphEdits} 次</div>` : ''}</div>
+    <div class="block"><div class="lbl">香火</div>${chips ? `<div class="offer-chips">${chips}</div>` : '<div class="note">还没人来烧过纸。</div>'}${bs.length ? `<div class="note">${bs.length} 次祭拜 · 最近一次 ${ago(Math.max(...bs.map(b => b.at)))}${t.npc ? ' · 原住民只记得你烧的' : ''}</div>` : ''}</div>
+    ${marks.length ? `<div class="marks">${marks.map(m => `<span class="mark">${esc(m)}</span>`).join('')}</div>` : ''}
+    <div class="dr-acts">${acts}</div>${why ? `<div class="why">${esc(why)}</div>` : ''}`;
+  d.classList.add('open');
+}
+
+/* ================= 棺材里 ================= */
+function renderCoffin() {
+  const t = S.myTomb; if (!t) return;
+  const now = new Date(), night = isNightAt(now), out = ghostOut();
+  const mine = burnsToMe();
+  const motes = REDUCED ? '' : Array.from({length: 9}, (_, i) => `<span class="mote" style="left:${38 + Math.random() * 24}%;top:${30 + Math.random() * 30}px;animation-delay:${-i * 1.1}s"></span>`).join('');
+  $('#coffin').innerHTML = `<section class="coffinview${night ? ' cv-night' : ''}">
+    <div class="cv-box" id="cvbox"><div class="crack"></div><div class="beam"></div>${motes}
+      <div class="cv-status"><div class="cv-title">${night ? '天黑了' : '棺材里'}</div>
+        <div class="cv-sub">${night ? '外面安静下来了，可以推开棺材板出去遛遛。'
+          : `阳间 <b>${hhmm(now)}</b> · ${shichen(now)} · 阳气太重，出不去。<br>距天黑还有 <b id="cvleft">${fmtDur(untilNight(now))}</b>（18:00 出棺）`}</div></div>
+      <div class="sleeper${S.flipped ? ' flipped' : ''}"><div class="ghost-lie">${GHOST_SVG}</div><span class="zzz">z z z</span></div>
+      <div class="cv-actions">
+        <button class="btn" data-act="knock">敲棺材板</button>
+        <button class="btn" data-act="flip">翻个身</button>
+        <button class="btn" data-act="wealth">数数家当</button>
+        ${out ? '<button class="btn primary" data-act="goout">推开棺材板，出去溜达</button>' : '<button class="btn seal" data-act="zhashi">诈尸（白天强行出棺）</button>'}
+      </div>
+      <div class="cv-stats">敲过 <span id="kcount">${t.knockCount || 0}</span> 次棺材板 · 诈尸 ${t.zhashiCount || 0} 次 · 墓址 ${address(layoutPlots().placed.get(S.uid) ?? t.plot ?? 0)}</div>
+    </div>
+    <aside class="cv-side"><h3>上面的动静 <span>${mine.length} 次</span></h3>
+      <p class="hint">${out ? '可以托梦回复了。活人睡着以后就能梦到。' : '隔着棺材板听得见，但白天活人不睡觉，托梦要等天黑。点模糊的字可以贴着板子听清楚。'}</p>
+      ${burnListHTML(mine, {muffle: !out, canReply: out})}
+    </aside></section>`;
+}
+function burnListHTML(list, {muffle, canReply}) {
+  if (!list.length) return `<div class="empty-note">还没人来烧纸。<br><button class="btn sm" data-act="invite" style="margin-top:10px">把墓址发给朋友</button></div>`;
+  return `<ul class="list">${list.map(b => `<li class="bl">
+    <div class="bl-h"><b>${esc(b.fromName || '一位路过的活人')}${b.from === S.uid ? '（你自己）' : ''}</b><time>${ago(b.at)}</time></div>
+    <div class="bl-items">烧了 ${esc(itemsText(b.items))}</div>
+    ${b.msg ? `<p class="bl-msg${muffle ? ' muffled' : ''}" ${muffle ? 'data-act="unmuffle" title="贴着棺材板听"' : ''}>${esc(b.msg)}</p>` : ''}
+    ${b.reply && b.reply.text ? `<div class="reply-quote">你托的梦：${esc(b.reply.text)}</div>` : ''}
+    <div class="bl-f"><span>${b.reply ? '<span class="ok">已托梦</span>' : '待托梦'}</span>${!b.reply && canReply ? `<button class="btn sm primary" data-act="dreamto" data-id="${esc(b.id)}">托梦</button>` : ''}</div>
+  </li>`).join('')}</ul>`;
+}
+
+/* ================= 弹窗们 ================= */
+function openInbox() {
+  const mine = burnsToMe(), out = ghostOut();
+  openModal(`<h2>香火簿</h2><p class="sub">${mine.length} 次祭拜，${mine.filter(b => !b.reply).length} 条等你托梦。${out ? '' : '白天只能看，天黑才能托梦。'}</p><div id="inboxlist">${burnListHTML(mine, {muffle: false, canReply: out})}</div>`);
+}
+function openBurn(id) {
+  const t = getTomb(id); if (!t) return;
+  if (!canBurn(t)) { toast('现在烧不了纸。', {err: true}); return; }
+  const cart = {};
+  const defName = S.myTomb ? `${S.myTomb.name}（鬼）` : LS.get('fromName', '');
+  const own = t.id === S.uid;
+  openModal(`<h2>${own ? '给自己烧点' : '给' + esc(t.name) + '烧纸'}</h2>
+    <p class="sub">${own ? '自力更生，丰衣足食。' : `${esc(t.name)}之墓 · ${esc(t.cause || '')}。挑点东西，写句话，点火就送到。`}</p>
+    <div class="items" id="items">${ITEMS.map(i => `<div class="iw"><button class="item" data-k="${i.k}"><span class="ic">${i.icon}</span><span class="nm">${esc(i.name)}</span><span class="nt">${esc(i.note)}</span></button></div>`).join('')}</div>
+    <div class="field"><label for="bmsg">想说的话</label><textarea id="bmsg" maxlength="120" placeholder="最近挺好的，就是有点想你。下面 Wi-Fi 怎么样？"></textarea></div>
+    <div class="field"><label for="bname">落款</label><input type="text" id="bname" maxlength="12" value="${esc(defName)}" placeholder="不填就是「一位路过的活人」"></div>
+    <div class="mfoot"><span class="why" id="bsum" style="margin-right:auto">还没挑东西</span><button class="btn primary" id="fire" disabled>点火</button></div>`, m => {
+    const sum = () => {
+      const n = Object.values(cart).reduce((a, b) => a + b, 0);
+      $('#bsum', m).textContent = n ? `共 ${n} 件 · ${itemsText(cart)}` : '还没挑东西';
+      $('#fire', m).disabled = !n;
+    };
+    const paint = k => {
+      const w = $(`.item[data-k="${k}"]`, m).parentElement, n = cart[k] || 0;
+      w.querySelector('.item').classList.toggle('on', n > 0);
+      w.querySelector('.cnt')?.remove(); w.querySelector('.minus')?.remove();
+      if (n) w.insertAdjacentHTML('beforeend', `<span class="badge cnt">${n}</span><button class="minus" data-k="${k}" aria-label="少烧一件">−</button>`);
+    };
+    $('#items', m).addEventListener('click', e => {
+      const mi = e.target.closest('.minus');
+      if (mi) { const k = mi.dataset.k; cart[k] = Math.max(0, (cart[k] || 0) - 1); if (!cart[k]) delete cart[k]; paint(k); sum(); return; }
+      const it = e.target.closest('.item'); if (!it) return;
+      const k = it.dataset.k; cart[k] = Math.min(99, (cart[k] || 0) + 1); paint(k); sum();
+    });
+    $('#fire', m).onclick = () => {
+      const msg = $('#bmsg', m).value.trim(), fromName = $('#bname', m).value.trim() || '一位路过的活人';
+      if (!S.myTomb) LS.set('fromName', $('#bname', m).value.trim());
+      doBurn(t, {...cart}, msg, fromName);
+    };
+  });
+}
+async function doBurn(t, items, msg, fromName) {
+  closeModal();
+  const rec = {to: t.id, from: S.uid || 'anon', fromName, items, msg, at: Date.now(), reply: null};
+  let write;
+  if (t.npc) {
+    rec.id = 'nb-' + Date.now().toString(36);
+    S.npcBurns.unshift(rec); S.npcBurns = S.npcBurns.slice(0, 60); LS.set('npcBurns', S.npcBurns);
+    write = Promise.resolve();
+    setTimeout(() => {
+      const b = S.npcBurns.find(x => x.id === rec.id); if (!b) return;
+      b.reply = {text: pick(t.dreams), style: pick(['plain', 'warm', 'mystic']), at: Date.now()};
+      LS.set('npcBurns', S.npcBurns); onDataChanged(); notifyReplies();
+    }, 6000 + Math.random() * 5000);
+  } else {
+    write = S.store.addBurn(rec);
+  }
+  let failed = null;
+  write.catch(e => { failed = e; });
+  await burnAnimation(items, t);
+  await write.catch(() => {});
+  if (failed) { toast(writeErr(failed, '纸没烧过去'), {err: true}); return; }
+  onDataChanged();
+  if (t.id === S.uid) toast('烧给自己了。去香火簿里给自己托个梦吧。');
+  else if (t.npc) toast(`已送达。${esc(t.name)}一会儿可能会给你托梦。`);
+  else toast(`已送达 ${esc(t.name)}。TA 白天躺在棺材里，天黑后会出来看；有回音会托梦给你，留意顶栏的「我的梦」。`, {ms: 7000});
+}
+function writeErr(e, what) {
+  const code = e && e.code;
+  if (code === 'invalid_argument') return `${what}：你在这个页面没有写入权限，需要页面主人把你设为协作者（Contributor）。`;
+  if (code === 'quota_exceeded') return `${what}：阴间仓库满了，请页面主人清理一下。`;
+  if (code === 'resource_exhausted') return `${what}：操作太快了，歇一下再试。`;
+  return `${what}：阴间服务器开小差了，请稍后再试。`;
+}
+function openDreamComposer(id) {
+  const b = S.burns.find(x => x.id === id); if (!b) return;
+  if (!ghostOut()) { toast('白天托不了梦，活人都醒着。'); return; }
+  let style = 'plain';
+  openModal(`<h2>托梦</h2><p class="sub">回给「${esc(b.fromName || '一位路过的活人')}」：TA 烧了 ${esc(itemsText(b.items))}${b.msg ? `，说：“${esc(b.msg)}”` : '。'}</p>
+    <div class="field"><label for="dtext">梦里说什么</label><textarea id="dtext" maxlength="120" placeholder="收到了，谢谢。这边挺好的，就是 Wi-Fi 不太行。"></textarea></div>
+    <div class="field"><span class="flabel">梦的气氛</span><div class="chips" id="dstyle">${DREAM_STYLES.map(s => `<button class="chip${s.k === style ? ' on' : ''}" data-k="${s.k}">${s.name}</button>`).join('')}</div></div>
+    <div class="mfoot"><button class="btn primary" id="dsend">入梦</button></div>`, m => {
+    $('#dstyle', m).onclick = e => { const c = e.target.closest('.chip'); if (!c) return; style = c.dataset.k; $$('.chip', m).forEach(x => x.classList.toggle('on', x === c)); };
+    $('#dsend', m).onclick = async () => {
+      const text = $('#dtext', m).value.trim(); if (!text) { $('#dtext', m).focus(); return; }
+      $('#dsend', m).disabled = true;
+      try {
+        await S.store.updateBurn(b.id, {reply: {text, style, at: Date.now()}});
+        closeModal(); Sound.bell(); toast('梦已托出。对方入睡后就能梦到。'); onDataChanged();
+      } catch (e) { $('#dsend', m).disabled = false; toast(writeErr(e, '没托出去'), {err: true}); }
+    };
+  });
+}
+function openDreams() {
+  const d = myDreams();
+  const row = b => {
+    const t = getTomb(b.to); const nm = t ? t.name : '某位故人';
+    const seen = new Set(LS.get('seenDreams', []));
+    return `<li class="bl"><div class="bl-h"><b>给 ${esc(nm)}</b><time>${ago(b.at)}</time></div>
+      <div class="bl-items">烧了 ${esc(itemsText(b.items))}</div>
+      <div class="bl-f">${b.reply && b.reply.text ? `<span class="ok">${seen.has(b.id) ? 'TA 托过梦' : 'TA 托梦了，还没做'}</span><button class="btn sm primary" data-act="dream" data-id="${esc(b.id)}">${seen.has(b.id) ? '再梦一次' : '去做梦'}</button>` : '<span>还没回音。鬼白天睡觉，晚上才出来。</span>'}</div></li>`;
+  };
+  openModal(`<h2>我的梦</h2><p class="sub">你烧过 ${d.sent.length} 次纸，收到 ${d.replied.length} 个梦。</p>${d.sent.length ? `<ul class="list">${d.sent.map(row).join('')}</ul>` : '<div class="empty-note">还没给谁烧过纸。</div>'}`);
+}
+function openInvite() {
+  const t = S.myTomb; if (!t) return;
+  const p = layoutPlots().placed.get(S.uid) ?? t.plot ?? 0;
+  const text = `我在电子墓地提前死了一下，坟在${address(p)}（墓址 #tomb-${t.code}），死因「${t.cause}」。有空来烧点纸，我晚上会托梦回你。`;
+  openModal(`<h2>邀请烧纸</h2><p class="sub">让朋友找到你的坟。</p>
+    <ol class="steps-list"><li>用这个页面右上角的「分享」把电子墓地发给朋友。朋友要有<b>协作者（Contributor）</b>权限才能烧纸，只能查看的人只能看。</li><li>告诉 TA 你的墓位：${address(p)}；或者让 TA 在链接末尾加上 <b>#tomb-${esc(t.code)}</b>，打开就直接到你坟前。</li></ol>
+    <div class="field"><span class="flabel">可以直接发的话</span><div class="copybox" id="invtext">${esc(text)}</div></div>
+    <div class="mfoot"><button class="btn primary" id="invcopy">复制这段话</button></div>`, m => { $('#invcopy', m).onclick = () => copyText(text, '复制好了，去发给朋友吧'); });
+}
+function openWealth() {
+  const tot = itemTotals(burnsToMe());
+  const val = Object.entries(tot).reduce((a, [k, n]) => a + ITEM[k].val * n, 0);
+  const rows = ITEMS.filter(i => tot[i.k]).map(i => `<div><span>${i.icon} ${esc(i.name)}</span><b>×${tot[i.k]}</b></div>`).join('');
+  openModal(`<h2>数数家当</h2><p class="sub">按天地银行牌价折算。</p><div class="bignum">${val.toLocaleString('zh-CN')} 亿</div><p class="note" style="margin:2px 0 14px">冥币总资产${val > 1000 ? '，在下面算是中产了' : val > 0 ? '，省着点花' : '，目前穷得叮当响'}。</p>${rows ? `<div class="wealth">${rows}</div>` : '<div class="empty-note">一件都没有。</div>'}`);
+}
+function openEpitaph() {
+  const t = S.myTomb; if (!t) return;
+  if (!ghostOut()) { toast('白天出不去，改不了碑文。'); return; }
+  openModal(`<h2>改碑文</h2><p class="sub">半夜蹲在自己坟前拿指甲刻。最多 40 个字。</p>
+    <div class="field"><textarea id="eptext" maxlength="40">${esc(t.epitaph || '')}</textarea></div>
+    <div class="field"><span class="flabel">没灵感就抄一句</span><div class="chips" id="epsug">${EPITAPHS.map(e => `<button class="chip">${esc(e)}</button>`).join('')}</div></div>
+    <div class="mfoot"><button class="btn primary" id="epsave">刻上去</button></div>`, m => {
+    $('#epsug', m).onclick = e => { const c = e.target.closest('.chip'); if (c) $('#eptext', m).value = c.textContent; };
+    $('#epsave', m).onclick = async () => {
+      const v = $('#eptext', m).value.trim(); if (!v || v === t.epitaph) { closeModal(); return; }
+      $('#epsave', m).disabled = true;
+      try { await S.store.updateTomb(S.uid, {epitaph: v, epitaphEdits: (t.epitaphEdits || 0) + 1}); Object.assign(t, {epitaph: v, epitaphEdits: (t.epitaphEdits || 0) + 1}); closeModal(); toast('刻好了。'); onDataChanged(); }
+      catch (e) { $('#epsave', m).disabled = false; toast(writeErr(e, '没刻上'), {err: true}); }
+    };
+  });
+}
+function openZhashi() {
+  openModal(`<h2>诈尸</h2><p class="sub">大白天强行出棺，能在墓园里待 10 分钟。阳气会灼烧你，而且<b>这次诈尸会被刻在墓碑上</b>，路过的人都看得见。</p>
+    <div class="mfoot"><button class="btn" data-close>算了，接着躺</button><button class="btn seal" id="zgo">诈！</button></div>`, m => {
+    $('#zgo', m).onclick = async () => {
+      const t = S.myTomb; $('#zgo', m).disabled = true;
+      const patch = {zhashiCount: (t.zhashiCount || 0) + 1, zhashiUntil: Date.now() + 10 * 60000};
+      try { await S.store.updateTomb(S.uid, patch); Object.assign(t, patch); closeModal(); S.pref = 'cemetery'; S.ghostPlot = null; Sound.whoosh(); renderAll(); toast('你诈尸了。抓紧时间，10 分钟后会被晒回棺材。'); }
+      catch (e) { $('#zgo', m).disabled = false; toast(writeErr(e, '没诈起来'), {err: true}); }
+    };
+  });
+}
+
+/* ================= 化纸动画 ================= */
+function burnAnimation(items, t) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div'); ov.className = 'burn';
+    ov.innerHTML = `<canvas></canvas><div class="basin"></div><div class="burn-msg">正在化纸……</div><div class="burn-sub">给 ${esc(t.name)} · ${esc(itemsText(items))}</div>`;
+    document.body.append(ov);
+    const cv = ov.querySelector('canvas'), ctx = cv.getContext('2d');
+    const dpr = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cx = innerWidth / 2, cy = innerHeight * .64;
+    let heat = .25, parts = [], done = false, raf = 0;
+    const loop = () => {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      const n = Math.round(6 * heat + 1);
+      for (let i = 0; i < n; i++) parts.push({x: cx + (Math.random() - .5) * 170 * Math.min(1, heat + .3), y: cy + 4, vx: (Math.random() - .5) * .8, vy: -(1.4 + Math.random() * 2.6 * heat), life: 0, max: 30 + Math.random() * 40, r: 8 + Math.random() * 14 * heat, ember: Math.random() < .08});
+      ctx.globalCompositeOperation = 'lighter';
+      parts = parts.filter(p => p.life < p.max);
+      for (const p of parts) {
+        p.life++; p.x += p.vx + Math.sin((p.life + p.y) / 9) * .4; p.y += p.ember ? p.vy * 1.6 : p.vy;
+        const k = p.life / p.max;
+        if (p.ember) { ctx.fillStyle = `rgba(255,${200 - k * 120},80,${1 - k})`; ctx.fillRect(p.x, p.y, 2, 2); continue; }
+        const r = p.r * (1 - k * .6), g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, `rgba(255,${230 - k * 150},${120 - k * 100},${.55 * (1 - k)})`); g.addColorStop(1, 'rgba(255,60,0,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      if (!done) raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    Sound.crackle(3.6);
+    const icons = []; Object.entries(items).forEach(([k, n]) => { for (let i = 0; i < Math.min(n, 3); i++) icons.push(ITEM[k]?.icon || '💴'); });
+    icons.splice(14);
+    icons.forEach((ic, i) => {
+      const el = document.createElement('span'); el.className = 'fall'; el.textContent = ic;
+      const sx = cx + (Math.random() - .5) * Math.min(innerWidth * .8, 600);
+      el.style.left = (sx - 19) + 'px'; el.style.top = '-60px'; ov.append(el);
+      const dy = cy + 60, dx = cx - sx + (Math.random() - .5) * 60;
+      const a = el.animate([{transform: 'translate(0,0) rotate(0) scale(1)', opacity: 1}, {transform: `translate(${dx * .9}px,${dy * .8}px) rotate(${(Math.random() - .5) * 220}deg) scale(.95)`, opacity: 1, offset: .75}, {transform: `translate(${dx}px,${dy}px) rotate(${(Math.random() - .5) * 400}deg) scale(.2)`, opacity: 0}], {duration: REDUCED ? 10 : 1400, delay: REDUCED ? 0 : 200 + i * 170, easing: 'cubic-bezier(.45,0,.75,.6)', fill: 'forwards'});
+      a.onfinish = () => { heat = Math.min(1.25, heat + .14); el.remove(); };
+    });
+    const total = REDUCED ? 900 : Math.max(3400, 200 + icons.length * 170 + 1800);
+    const finish = () => {
+      if (done) return; done = true; cancelAnimationFrame(raf);
+      ov.style.transition = 'opacity .5s'; ov.style.opacity = '0'; setTimeout(() => { ov.remove(); resolve(); }, 500);
+    };
+    setTimeout(() => { ov.querySelector('.burn-msg').textContent = '已送达 · 阴间到账'; Joss.burst(40); }, total - 900);
+    setTimeout(finish, total + 600);
+    setTimeout(() => ov.addEventListener('click', finish), 1500);
+  });
+}
+
+/* ================= 做梦 ================= */
+async function openDream(id) {
+  const b = [...S.burns, ...S.npcBurns].find(x => x.id === id); if (!b || !b.reply) return;
+  closeModal();
+  const seen = new Set(LS.get('seenDreams', [])); seen.add(b.id); LS.set('seenDreams', [...seen]);
+  const t = getTomb(b.to);
+  if (!isNightAt(new Date()) && !REDUCED) {
+    // 白天先闭眼睡一觉
+    const top = document.createElement('div'), bot = document.createElement('div'), txt = document.createElement('div');
+    top.className = 'lid-top'; bot.className = 'lid-bot'; txt.className = 'sleeptxt'; txt.textContent = '白天做不了梦，先眯一会儿……';
+    document.body.append(top, bot, txt);
+    await sleep(30); document.body.classList.add('lids-closed'); txt.classList.add('in');
+    await sleep(2300);
+    showDream(b, t);
+    txt.classList.remove('in'); document.body.classList.remove('lids-closed');
+    setTimeout(() => { top.remove(); bot.remove(); txt.remove(); }, 1300);
+  } else showDream(b, t);
+  renderHeader();
+}
+function showDream(b, t) {
+  const st = b.reply.style || 'plain';
+  const palette = {plain: ['#3b2a63', '#1d3d5c', '#0a0814'], warm: ['#6b3d1e', '#5c3b55', '#140a06'], scary: ['#5a0b0b', '#2a0606', '#0d0303'], mystic: ['#0f4d3a', '#2b2a63', '#050d0a']}[st] || ['#3b2a63', '#1d3d5c', '#0a0814'];
+  const ov = document.createElement('div'); ov.className = 'dream ' + st; ov.style.background = palette[2];
+  const chars = [...b.reply.text].map((c, i) => `<span style="animation-delay:${.6 + i * .07}s">${c === ' ' ? '&nbsp;' : esc(c)}</span>`).join('');
+  const endDelay = .6 + [...b.reply.text].length * .07 + .6;
+  let lotto = '';
+  if (st === 'mystic') {
+    let seed = [...b.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+    const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
+    const nums = new Set(); while (nums.size < 6) nums.add(1 + Math.floor(rnd() * 33));
+    lotto = `<div class="lotto" style="animation-delay:${endDelay + .4}s">梦里的数字：${[...nums].sort((a, b) => a - b).map(n => String(n).padStart(2, '0')).join(' ')} + ${String(1 + Math.floor(rnd() * 16)).padStart(2, '0')}<br><small style="font-family:var(--font-body);font-size:12px;letter-spacing:0;color:#9fbfae">仅供娱乐，阴间不负责兑奖</small></div>`;
+  }
+  ov.innerHTML = `<div class="blob" style="width:420px;height:420px;left:-80px;top:-60px;background:${palette[0]}"></div><div class="blob" style="width:520px;height:520px;right:-120px;bottom:-140px;background:${palette[1]};animation-delay:-6s"></div>
+    <div class="card"><div class="kicker">你做了一个梦</div><div class="txt">${chars}</div>
+    <div class="sig" style="animation-delay:${endDelay}s">—— ${esc(t ? t.name : '某位故人')} 托梦 · ${ago(b.reply.at)}</div>${lotto}
+    <button class="btn wake" style="animation-delay:${endDelay + .8}s">醒来</button></div>`;
+  document.body.append(ov);
+  Sound.bell();
+  const close = () => { ov.style.transition = 'opacity .6s'; ov.style.opacity = '0'; setTimeout(() => ov.remove(), 600); };
+  ov.querySelector('.wake').onclick = close;
+  const onKey = e => { if (e.key === 'Escape') { close(); removeEventListener('keydown', onKey); } };
+  addEventListener('keydown', onKey);
+}
+
+/* ================= 葬礼 ================= */
+let F = null, funEl = null;
+function openFuneral(prefill = {}) {
+  if (!S.ready) { toast('还在连接阴间服务器，稍等一下。'); return; }
+  if (!S.local && (!S.uid || S.canWrite === false)) {
+    openModal(`<h2>入不了土</h2><p class="sub">${!S.uid ? '这个页面拿不到你的登录身份，所以没法给你登记户口。' : '你在这个页面只有查看权限。请页面主人在「分享」里把你设为协作者（Contributor），就能办葬礼、烧纸了。'}</p><div class="mfoot"><button class="btn" data-close>知道了</button></div>`);
+    return;
+  }
+  const prev = S.myTomb || {};
+  const L = layoutPlots();
+  const taken = new Set([...L.map.keys()].filter(p => L.map.get(p).id !== S.uid));
+  let plot = prefill.plot ?? (L.placed.get(S.uid));
+  if (plot == null || taken.has(plot)) { plot = Object.keys(SPECIAL).map(Number).find(p => !taken.has(p)); if (plot == null) { plot = 0; while (taken.has(plot)) plot++; } }
+  F = {step: 0, name: prev.name || '', birthYear: prev.birthYear || '', cause: prev.cause || '', portrait: prev.portrait ?? 0, lastWords: prev.lastWords || '', style: prev.style || 'qingshi', plot, epitaph: prev.epitaph || '', taken, scene: 0, bows: 0, couplet: Math.floor(Math.random() * COUPLETS.length), regNo: Math.random().toString().slice(2, 8)};
+  funEl = document.createElement('div'); funEl.className = 'fun'; funEl.setAttribute('role', 'dialog'); funEl.setAttribute('aria-label', '葬礼');
+  document.body.append(funEl);
+  closeDrawer(true);
+  renderFun();
+}
+function closeFuneral() { Sound.stop(); if (funEl) funEl.remove(); funEl = null; F = null; if (location.hash === '#funeral') { try { location.hash = 'yard'; } catch {} } }
+function previewTomb() { return {name: F.name || '某某', birthYear: +F.birthYear || 2000, portrait: F.portrait, style: F.style, diedAt: Date.now()}; }
+function renderFun() {
+  const names = ['登记', '选墓', '碑文', '出殡'];
+  const steps = names.map((n, i) => `<span class="${i === F.step ? 'on' : i < F.step ? 'done' : ''}">${i + 1} ${n}</span>`).join('');
+  let body = '';
+  if (F.step === 0) {
+    body = `<div class="paper"><div class="stamp">地府<br>户籍科</div>
+      <h2>阴间户籍登记表</h2><div class="sub">地府民政局 · 电子墓地分局 · 编号 ${F.regNo}</div>
+      <div class="two"><div class="field"><label for="fname">姓名 / 称呼</label><input type="text" id="fname" maxlength="8" value="${esc(F.name)}" placeholder="会刻在碑上，最多 8 个字"></div>
+      <div class="field"><label for="fyear">出生年份</label><input type="number" id="fyear" min="1900" max="${new Date().getFullYear()}" value="${esc(F.birthYear)}" placeholder="例如 1996"></div></div>
+      <div class="field"><span class="flabel">死因</span><div class="chips" id="fcause">${CAUSES.map(c => `<button class="chip${F.cause === c ? ' on' : ''}">${esc(c)}</button>`).join('')}</div>
+        <input type="text" id="fcause2" maxlength="12" placeholder="都不是？自己写一个" value="${CAUSES.includes(F.cause) ? '' : esc(F.cause)}"></div>
+      <div class="field"><span class="flabel">遗像（黑白）</span><div class="faces" id="ffaces">${FACES.map((f, i) => `<button class="${F.portrait === i ? 'on' : ''}" data-i="${i}" aria-label="遗像 ${i + 1}">${portraitHTML({portrait: i})}</button>`).join('')}</div></div>
+      <div class="field"><label for="flast">遗言</label><input type="text" id="flast" maxlength="40" value="${esc(F.lastWords)}" placeholder="葬礼上会念，最多 40 个字"></div>
+      <div class="err-line" id="ferr"></div>
+      <div class="fun-nav"><span></span><button class="btn primary" data-f="next">盖章，下一步</button></div></div>`;
+  } else if (F.step === 1) {
+    let mg = '';
+    const L = layoutPlots(); const tot = Math.max(30, L.total);
+    for (let i = 0; i < tot; i++) {
+      const tk = F.taken.has(i), occ = L.map.get(i), sp = SPECIAL[i];
+      mg += `<button class="${tk ? 'taken' : ''}${sp && !tk ? ' sp' : ''}${F.plot === i ? ' on' : ''}" data-p="${i}" ${tk ? 'disabled' : ''} title="${esc(address(i))}">${tk ? esc(short(occ.name, 4)) : sp ? esc(short(sp, 5)) : `${Math.floor(i / COLS) + 1}-${i % COLS + 1}`}</button>`;
+    }
+    body = `<div class="split"><div>
+      <h2 class="brush" style="font-size:34px">选碑</h2>
+      <div class="stylepick" id="fstyle" style="margin-top:12px">${STYLES.map(s => `<button class="${F.style === s.k ? 'on' : ''}" data-k="${s.k}">${stoneMini({name: F.name || '某某', style: s.k})}<b style="font-size:14px">${s.name}</b><small>${s.note}</small></button>`).join('')}</div>
+      <h2 class="brush" style="font-size:34px;margin-top:26px">选墓位</h2><p class="note">金色的是好位置。灰色的已经有人住了。当前：${address(F.plot)}${SPECIAL[F.plot] ? ' · ' + SPECIAL[F.plot] : ''}</p>
+      <div class="minigrid" id="fplot" style="margin-top:10px">${mg}</div>
+      <div class="fun-nav"><button class="btn" data-f="back">上一步</button><button class="btn primary" data-f="next">就这儿了</button></div></div>
+      <div class="preview"><div class="lbl">预览</div>${stoneBig(previewTomb())}</div></div>`;
+  } else if (F.step === 2) {
+    body = `<div class="split"><div>
+      <h2 class="brush" style="font-size:34px">墓志铭</h2><p class="note">刻在碑上给路人看的一句话，最多 40 个字。以后每天晚上都能出来改。</p>
+      <div class="field dark-field"><textarea id="fep" maxlength="40" placeholder="终于不用上班了">${esc(F.epitaph)}</textarea></div>
+      <div class="field dark-field"><span class="flabel">没灵感就抄一句</span><div class="chips" id="fsug">${EPITAPHS.map(e => `<button class="chip">${esc(e)}</button>`).join('')}</div></div>
+      <div class="fun-nav"><button class="btn" data-f="back">上一步</button><button class="btn primary" data-f="next">开追悼会</button></div></div>
+      <div class="preview"><div class="lbl">预览</div>${stoneBig(previewTomb())}<p class="ep-text" id="fepprev" style="margin-top:22px;font-size:16px">${esc(F.epitaph || '终于不用上班了')}</p></div></div>`;
+  }
+  if (F.step < 3) {
+    funEl.innerHTML = `<div class="fun-top"><span class="brand" style="font-size:24px">葬礼筹备</span><div class="steps">${steps}</div><button class="x" data-f="close" aria-label="取消葬礼">✕</button></div><div class="fun-body">${body}</div>`;
+    bindFun();
+  } else renderCeremony(steps);
+}
+function bindFun() {
+  funEl.onclick = e => {
+    const a = e.target.closest('[data-f]');
+    if (a) { const f = a.dataset.f; if (f === 'close') return closeFuneral(); if (f === 'back') { saveStep(); F.step--; return renderFun(); } if (f === 'next') { if (!saveStep(true)) return; F.step++; if (F.step === 3) { F.eulogy = makeEulogy(); F.verdict = pick(VERDICTS); } return renderFun(); } }
+    const cause = e.target.closest('#fcause .chip');
+    if (cause) { F.cause = cause.textContent; $$('#fcause .chip').forEach(c => c.classList.toggle('on', c === cause)); $('#fcause2').value = ''; }
+    const face = e.target.closest('#ffaces button');
+    if (face) { F.portrait = +face.dataset.i; $$('#ffaces button').forEach(c => c.classList.toggle('on', c === face)); }
+    const st = e.target.closest('#fstyle button');
+    if (st) { F.style = st.dataset.k; renderFun(); }
+    const pl = e.target.closest('#fplot button');
+    if (pl && !pl.disabled) { F.plot = +pl.dataset.p; renderFun(); }
+    const sug = e.target.closest('#fsug .chip');
+    if (sug) { $('#fep').value = sug.textContent; F.epitaph = sug.textContent; $('#fepprev').textContent = sug.textContent; }
+  };
+  const ep = $('#fep'); if (ep) ep.oninput = () => { F.epitaph = ep.value; $('#fepprev').textContent = ep.value || '终于不用上班了'; };
+  const c2 = $('#fcause2'); if (c2) c2.oninput = () => { if (c2.value.trim()) { F.cause = c2.value.trim(); $$('#fcause .chip').forEach(c => c.classList.remove('on')); } };
+}
+function saveStep(validate) {
+  if (F.step === 0) {
+    F.name = $('#fname').value.trim(); F.birthYear = $('#fyear').value.trim(); F.lastWords = $('#flast').value.trim();
+    const c2 = $('#fcause2').value.trim(); if (c2) F.cause = c2;
+    if (validate) {
+      const y = +F.birthYear, now = new Date().getFullYear();
+      const err = !F.name ? '先写上名字，碑上要刻的。' : !(y >= 1900 && y <= now) ? `出生年份要在 1900 到 ${now} 之间。` : !F.cause ? '选一个死因，或者自己写一个。' : '';
+      if (err) { $('#ferr').textContent = err; return false; }
+      F.birthYear = y;
+    }
+  }
+  if (F.step === 2) { F.epitaph = $('#fep').value.trim(); if (validate && !F.epitaph) F.epitaph = '终于不用上班了'; }
+  return true;
+}
+function makeEulogy() {
+  const n = F.name, age = new Date().getFullYear() - F.birthYear;
+  return [
+    `${n}同志，${F.birthYear}年生人，于${cnDate(Date.now())}在电子墓地提前逝世，享年${age}岁（阳寿余额充足，随时可以续费）。`,
+    `${n}的一生，是${pick(ADJ)}的一生，是${pick(ADJ2)}的一生。`,
+    `生前，${n}${pick(ACHV)}，${pick(ACHV2)}。`,
+    `经阴间医院鉴定，死因为“${F.cause}”，属于${pick(CATEG)}。`,
+    `${n}走得很安详。走之前，${pick(LASTACT)}。`,
+    F.lastWords ? `遗言只有一句：“${F.lastWords}”` : `${n}没有留下遗言，大概是还没想好。`,
+    `${n}的离去，${pick(EFFECT)}。愿${n}在那边${pick(WISH)}。`,
+  ].join('\n');
+}
+function renderCeremony(steps) {
+  const [cr, cl, cb] = COUPLETS[F.couplet];
+  const tomb = previewTomb();
+  const sc = F.scene;
+  let center = '', host = '', btn = '';
+  const altar = `<div class="altar"><span class="rosette"></span>${portraitHTML(tomb, true)}<div class="nm">${esc(F.name)}</div></div><div class="candles"><span class="candle"></span><span class="candle"></span></div>`;
+  if (sc === 0) { center = altar; host = `<b>主持人：</b>${esc(F.name)}同志追悼会，现在开始。请全体起立。`; btn = '<button class="btn primary" data-c="next">全体起立</button>'; }
+  if (sc === 1) { center = altar + '<div class="countdown" id="cd">3</div>'; host = '<b>主持人：</b>默哀三秒。'; }
+  if (sc === 2) { center = `<div class="eulogy" id="eul"></div>`; host = '<b>主持人：</b>下面宣读悼词。'; btn = '<button class="btn primary" data-c="next" id="eulbtn">念完了</button>'; }
+  if (sc === 3) { center = `<div class="stage" id="stg">${altar}</div><div class="bowcount">${['', '一鞠躬', '二鞠躬', '三鞠躬'][F.bows] || '　'}</div>`; host = '<b>主持人：</b>向遗体三鞠躬。'; btn = `<button class="btn primary" data-c="bow">鞠躬（${F.bows}/3）</button>`; }
+  if (sc === 4) { center = `<div class="coffin" id="cof"><div class="cb"></div><div class="ci"><span class="face">${FACES[F.portrait]}</span></div><div class="lid">寿</div><div class="verdict" id="vd"><small>盖棺定论</small>${esc(F.verdict)}</div></div>`; host = '<b>主持人：</b>瞻仰遗容。最后看一眼。'; btn = '<button class="btn primary" data-c="lid">盖棺</button>'; }
+  if (sc === 5) { center = `<div class="grave" id="grv"><div class="coffin closed" id="cof"><div class="cb"></div><div class="ci"></div><div class="lid">寿</div></div><div class="dirt"></div><div class="newstone">${stoneMini({name: F.name, style: F.style})}</div></div>`; host = '<b>主持人：</b>入土为安。'; }
+  if (sc === 6) { center = `<div class="grave filled"><div class="dirt"></div><div class="newstone">${stoneMini({name: F.name, style: F.style})}</div></div>`; host = `<b>主持人：</b>礼成。${esc(F.name)}，一路走好。<br><span style="color:#a6a192;font-size:14px">${esc(F.epitaph)}</span>`; btn = '<button class="btn primary" data-c="save" id="savebtn">入住新家</button><div class="err-line" id="saveerr"></div>'; }
+  funEl.innerHTML = `<div class="fun-top"><span class="brand" style="font-size:24px">追悼会</span><div class="steps">${steps}</div><button class="x" data-f="close" aria-label="取消葬礼">✕</button></div>
+    <div class="hall"><div class="hbanner">${cb}</div><div class="couplet r">${cr}</div><div class="couplet l">${cl}</div>
+    ${center}<div class="host">${host}</div><div style="display:flex;flex-direction:column;align-items:center;gap:6px">${btn}</div></div>`;
+  funEl.onclick = e => {
+    if (e.target.closest('[data-f="close"]')) return closeFuneral();
+    const c = e.target.closest('[data-c]'); if (!c) return;
+    const k = c.dataset.c;
+    if (k === 'next') {
+      if (sc === 0) { Sound.gong(); F.scene = 1; renderFun(); runSilence(); }
+      else if (sc === 2) { if (F.typing) { F.typing = false; $('#eul').textContent = F.eulogy; return; } F.scene = 3; renderFun(); }
+    }
+    if (k === 'bow') {
+      Sound.muyu(); F.bows++; const stg = $('#stg'); stg.classList.add('bowing');
+      $('.bowcount').textContent = ['', '一鞠躬', '二鞠躬', '三鞠躬'][F.bows];
+      c.disabled = true;
+      setTimeout(() => { stg.classList.remove('bowing'); if (F.bows >= 3) setTimeout(() => { F.scene = 4; renderFun(); }, 500); else { c.disabled = false; c.textContent = `鞠躬（${F.bows}/3）`; } }, 650);
+    }
+    if (k === 'lid') {
+      c.disabled = true; $('#cof').classList.add('closed'); Sound.knock();
+      $('.host').innerHTML = '<b>主持人：</b>盖棺。';
+      setTimeout(() => { $('#vd').classList.add('in'); Sound.muyu(); $('.host').innerHTML = `<b>主持人：</b>盖棺定论：${esc(F.verdict)}。`; c.textContent = '下葬'; c.disabled = false; c.dataset.c = 'bury'; }, 1700);
+    }
+    if (k === 'bury') { F.scene = 5; renderFun(); runBurial(); }
+    if (k === 'save') saveTomb(c);
+  };
+  if (sc === 2) typeEulogy();
+}
+async function runSilence() {
+  Sound.dirge();
+  for (let i = 3; i >= 1; i--) { const cd = $('#cd'); if (!cd || !F) return; cd.textContent = i; await sleep(1000); }
+  if (!F || F.scene !== 1) return;
+  F.scene = 2; renderFun();
+}
+async function typeEulogy() {
+  const el = $('#eul'); if (!el) return;
+  F.typing = true; const text = F.eulogy; let i = 0;
+  if (REDUCED) { el.textContent = text; F.typing = false; return; }
+  while (F && F.typing && i <= text.length) { el.textContent = text.slice(0, i); el.scrollTop = el.scrollHeight; i += 2; await sleep(45); }
+  if (F) F.typing = false;
+}
+async function runBurial() {
+  await sleep(300); const cof = $('#cof'); if (!cof) return; cof.classList.add('buried'); Sound.whoosh();
+  await sleep(2000); const g = $('#grv'); if (!g) return; g.classList.add('filled');
+  await sleep(2200); if (!F || F.scene !== 5) return;
+  Sound.stop(); Sound.gong(); Joss.burst(90); F.scene = 6; renderFun();
+}
+async function saveTomb(btn) {
+  const prev = S.myTomb || {};
+  const data = {
+    name: F.name, birthYear: F.birthYear, cause: F.cause, portrait: F.portrait, lastWords: F.lastWords,
+    style: F.style, plot: F.plot, epitaph: F.epitaph, epitaphEdits: 0, eulogy: F.eulogy, verdict: F.verdict,
+    diedAt: Date.now(), zhashiCount: prev.zhashiCount || 0, zhashiUntil: 0, knockCount: prev.knockCount || 0,
+    code: prev.code || Math.random().toString(36).slice(2, 8), funerals: (prev.funerals || 0) + 1,
+  };
+  btn.disabled = true; btn.textContent = '正在登记户口…';
+  try { await S.store.setTomb(S.uid, data); }
+  catch (e) { btn.disabled = false; btn.textContent = '再试一次'; $('#saveerr').textContent = writeErr(e, '户口没登记上'); return; }
+  const t = {id: S.uid, ...data};
+  S.tombs = [...S.tombs.filter(x => x.id !== S.uid), t]; S.myTomb = t;
+  closeFuneral();
+  S.ghostPlot = null;
+  S.pref = ghostOut() ? 'cemetery' : 'coffin';
+  renderAll();
+  if (ghostOut()) toast('下葬完成。天已经黑了，出去转转吧。', {btn: '邀请烧纸', onBtn: openInvite, ms: 6000});
+  else toast('下葬完成。现在是白天，先在棺材里躺着，18:00 天黑后可以出来。', {btn: '邀请烧纸', onBtn: openInvite, ms: 7000});
+}
+
+/* ================= 实时：在场的人、敲棺材板 ================= */
+function pushPresence() {
+  if (!S.room) return;
+  const ghost = S.myTomb && ghostOut() && S.view === 'cemetery';
+  const p = ghost ? {mode: 'ghost', plot: S.ghostPlot ?? null, uid: S.uid, viewing: S.openTomb || null}
+    : {mode: S.myTomb ? 'coffin' : 'living', plot: null, uid: S.uid, viewing: S.openTomb || null};
+  S.room.presence(p).catch(() => {});
+}
+async function initRoom() {
+  let room = null;
+  try { room = await window.claude.use('room'); } catch {}
+  if (!room) return;
+  S.room = room;
+  room.onPeers(ch => { S.peers = ch.peers; if (S.view === 'cemetery') { renderPeers(); const m = $('.yard-meta'); if (m) refreshMeta(); } }, () => { S.room = null; S.peers = []; });
+  room.on('knock', msg => {
+    const id = msg.data && msg.data.tomb; if (!id || msg.sameTab) return;
+    if (S.openTomb === id) { const bs = $('#bigstone'); if (bs) { bs.classList.remove('shake'); void bs.offsetWidth; bs.classList.add('shake'); } toast('棺材里传来“咚、咚、咚”的声音……'); Sound.knock(); }
+    const t = getTomb(id); const p = S.layout && S.layout.placed.get(id);
+    if (p != null) { const el = $(`#grid [data-plot="${p}"]`); if (el) { el.classList.remove('wobble'); void el.offsetWidth; el.classList.add('wobble'); } }
+  }, () => {});
+  pushPresence();
+}
+function refreshMeta() {
+  const living = S.peers.filter(p => p.presence && p.presence.mode === 'living' && !p.sameTab).length;
+  const ghosts = S.peers.filter(p => p.presence && p.presence.mode === 'ghost' && !p.sameTab).length;
+  const m = $('.yard-meta'); if (!m) return;
+  m.innerHTML = `<span>新坟 <b>${S.tombs.length}</b> 座</span><span>原住民 <b>${NPCS.length}</b> 位</span><span>香火 <b>${S.burns.length + S.npcBurns.length}</b> 次</span>${S.room ? `<span>此刻在场：活人 <b>${living}</b> · 鬼 <b>${ghosts}</b></span>` : ''}`;
+}
+let knockPending = 0, knockTimer = null, knockWriting = false;
+function knock() {
+  Sound.knock();
+  const box = $('#cvbox'); if (box) { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+  if (S.room) S.room.emit('knock', {tomb: S.uid}).catch(() => {});
+  knockPending++;
+  const kc = $('#kcount'); if (kc && S.myTomb) kc.textContent = (S.myTomb.knockCount || 0) + knockPending;
+  clearTimeout(knockTimer); knockTimer = setTimeout(flushKnocks, 1500);
+}
+async function flushKnocks() {
+  if (knockWriting || !knockPending || !S.myTomb) return;
+  knockWriting = true; const n = knockPending; knockPending = 0;
+  const v = (S.myTomb.knockCount || 0) + n;
+  try { await S.store.updateTomb(S.uid, {knockCount: v}); S.myTomb.knockCount = v; } catch {}
+  knockWriting = false; if (knockPending) flushKnocks();
+}
+
+/* ================= 数据变化 ================= */
+function onDataChanged() {
+  S.myTomb = S.uid ? S.tombs.find(t => t.id === S.uid) || null : null;
+  if (S.view === 'coffin' && !S.myTomb) S.pref = 'cemetery';
+  renderAll();
+}
+function notifyReplies() {
+  const d = myDreams();
+  for (const b of d.replied) {
+    if (S.knownReplies.has(b.id)) continue;
+    S.knownReplies.add(b.id);
+    const seen = new Set(LS.get('seenDreams', []));
+    if (S.repliesPrimed && !seen.has(b.id) && b.to !== S.uid) { const t = getTomb(b.to); toast(`${esc(t ? t.name : '某位故人')}给你托梦了。`, {btn: '去做梦', onBtn: () => openDream(b.id), ms: 8000}); }
+  }
+  S.repliesPrimed = true;
+  renderHeader();
+}
+function onBurns(list) {
+  S.burns = list;
+  if (!S.firstBurns && S.uid) {
+    for (const b of list) if (b.to === S.uid && !S.knownBurns.has(b.id) && b.from !== S.uid) {
+      toast(`${S.view === 'coffin' ? '头顶传来烧纸声……' : ''}${esc(b.fromName || '有人')}给你烧了 ${esc(itemsText(b.items))}`, {btn: '看看', onBtn: () => S.view === 'coffin' ? null : openInbox()});
+    }
+  }
+  list.forEach(b => S.knownBurns.add(b.id));
+  S.firstBurns = false;
+  notifyReplies();
+  onDataChanged();
+}
+
+/* ================= 事件 ================= */
+document.addEventListener('click', e => {
+  const plot = e.target.closest('#grid .plot');
+  if (plot) {
+    const p = +plot.dataset.plot, id = plot.dataset.tomb;
+    if (S.myTomb && ghostOut()) moveGhost(p);
+    if (id) openTomb(id);
+    else if (SPECIAL[p] || !S.myTomb) toast(`${address(p)}${SPECIAL[p] ? '「' + esc(SPECIAL[p]) + '」' : ''}，还空着。`, S.myTomb ? {} : {btn: '我要这块', onBtn: () => openFuneral({plot: p})});
+    return;
+  }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act;
+  ({
+    funeral: () => openFuneral(),
+    refuneral: () => openFuneral(),
+    scrollyard: () => $('#grid')?.scrollIntoView({behavior: REDUCED ? 'auto' : 'smooth', block: 'start'}),
+    inbox: openInbox, dreams: openDreams, invite: openInvite, wealth: openWealth, epitaph: openEpitaph, zhashi: openZhashi,
+    sound: () => { S.sound = !S.sound; LS.set('sound', S.sound); if (!S.sound) Sound.stop(); renderHeader(); },
+    closedrawer: () => closeDrawer(),
+    burn: () => openBurn(a.dataset.id),
+    dreamto: () => openDreamComposer(a.dataset.id),
+    dream: () => openDream(a.dataset.id),
+    knock,
+    flip: () => { S.flipped = !S.flipped; $('.sleeper')?.classList.toggle('flipped', S.flipped); toast(S.flipped ? '你翻了个身，现在脸朝下。' : '又翻回来了。'); },
+    goout: () => { S.pref = 'cemetery'; S.ghostPlot = null; Sound.whoosh(); renderAll(); },
+    sleep: () => { S.pref = 'coffin'; renderAll(); toast('回棺材躺着了。'); },
+    gomine: () => { const p = S.layout?.placed.get(S.uid); if (p != null) { moveGhost(p); openTomb(S.uid); } },
+    unmuffle: () => a.classList.remove('muffled'),
+  }[act] || (() => {}))();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (modalEl) return closeModal(); if (S.openTomb) return closeDrawer(); }
+  if (modalEl || funEl || !S.myTomb || !ghostOut() || S.view !== 'cemetery') return;
+  if (/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+  const cols = gridCols(); const d = {ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols}[e.key];
+  if (d) { e.preventDefault(); moveGhost((S.ghostPlot ?? 0) + d); const t = S.layout.map.get(S.ghostPlot); if (S.openTomb && t) openTomb(t.id); }
+  if (e.key === 'Enter' && document.activeElement === document.body) { const t = S.layout?.map.get(S.ghostPlot); if (t) openTomb(t.id); }
+});
+function handleHash() {
+  const h = location.hash.slice(1);
+  if (h === 'funeral' && !funEl) { if (S.ready && !S.myTomb) openFuneral(); return; }
+  if (h.startsWith('tomb-')) {
+    const code = h.slice(5); const t = allTombs().find(x => x.code === code);
+    if (t) { if (S.openTomb !== t.id) openTomb(t.id); S.pendingHash = null; } else S.pendingHash = code;
+  }
+}
+addEventListener('hashchange', handleHash);
+
+/* ================= 时钟 ================= */
+setInterval(() => {
+  const now = new Date();
+  const key = `${isNightAt(now)}|${ghostOut()}|${now.getMinutes()}`;
+  const zs = $('#zsleft'); if (zs && S.myTomb) zs.textContent = mmss(S.myTomb.zhashiUntil - Date.now());
+  if (key === S.stateKey) return;
+  const prev = S.stateKey.split('|'); S.stateKey = key;
+  const changed = prev[0] !== String(isNightAt(now)) || prev[1] !== String(ghostOut());
+  if (changed && prev.length > 1) {
+    if (S.myTomb && prev[1] === 'true' && !ghostOut()) toast(prev[0] === 'true' ? '天亮了，回棺材躺着吧。' : '阳气太重，你被晒回了棺材。');
+    if (S.myTomb && prev[1] === 'false' && ghostOut() && isNightAt(now)) toast('天黑了，可以推开棺材板出去了。');
+    if (!modalEl) renderAll(); else renderHeader();
+  } else {
+    renderHeader();
+    const cl = $('#cvleft'); if (cl) cl.textContent = fmtDur(untilNight(now));
+  }
+}, 1000);
+
+/* ================= 启动 ================= */
+function startLocal(note) {
+  S.local = true; S.store = makeLocalStore(); S.uid = 'local-me'; S.canWrite = true; S.ready = true;
+  S.netNote = note || '单机模式';
+  S.store.watchTombs(list => { S.tombs = list; onDataChanged(); if (S.pendingHash) handleHash(); });
+  S.store.watchBurns(onBurns);
+  setTimeout(handleHash, 50);
+}
+async function boot() {
+  BG.init($('#bg'));
+  renderAll();
+  if (!window.claude || typeof window.claude.use !== 'function') return startLocal();
+  let db = null, user = null;
+  try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch {}
+  if (!db) return startLocal('没连上阴间服务器 · 单机模式');
+  S.user = user;
+  S.uid = user ? await user.id() : null;
+  S.canWrite = user ? await user.can('data.write') : null;
+  S.store = makeDbStore(db);
+  S.netNote = '正在读取墓园…';
+  renderHeader();
+  let loaded = false;
+  const timer = setTimeout(() => { if (!loaded) { S.netNote = '墓园数据还没读到，可能不是最新'; renderHeader(); } }, 10000);
+  let bootedView = false;
+  S.store.watchTombs((list, meta) => {
+    S.tombs = list;
+    if (!meta.fromCache) { loaded = true; clearTimeout(timer); S.ready = true; S.netNote = ''; }
+    if (!bootedView && S.ready) { bootedView = true; }
+    onDataChanged();
+    if (S.pendingHash || location.hash.startsWith('#tomb-') || location.hash === '#funeral') handleHash();
+  }, err => { clearTimeout(timer); S.netNote = err.code === 'revoked' ? '' : '墓园数据读取失败，刷新试试'; S.ready = true; renderHeader(); });
+  S.store.watchBurns((list) => onBurns(list), () => {});
+  initRoom();
+}
+boot();
+})();
+</script>
+</body>
+</html>
