@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import GameMap from './GameMap.vue';
 import Ghost from './Ghost.vue';
 import GhostBar from './GhostBar.vue';
 import GroupBlock from './GroupBlock.vue';
@@ -27,6 +28,25 @@ const pulse = usePulseStore();
 const ui = useUiStore();
 
 const gridRef = ref<HTMLElement | null>(null);
+const gameRef = ref<InstanceType<typeof GameMap> | null>(null);
+
+const VIEW_MODE_KEY = 'afterme:zoneViewMode';
+function readViewMode(): 'map' | 'list' {
+  try {
+    return localStorage.getItem(VIEW_MODE_KEY) === 'list' ? 'list' : 'map';
+  } catch {
+    return 'map';
+  }
+}
+const viewMode = ref<'map' | 'list'>(readViewMode());
+function setViewMode(mode: 'map' | 'list') {
+  viewMode.value = mode;
+  try {
+    localStorage.setItem(VIEW_MODE_KEY, mode);
+  } catch {
+    /* 浏览器不让存就算了 */
+  }
+}
 const phaseId = ref<number | null>(null);
 const cells = ref(60);
 const skipSpan = ref(new Set<number>());
@@ -126,6 +146,15 @@ function onPlotClick(plot: number, code?: string) {
   ui.toast(`${address(plot)}${sp ? '「' + sp + '」' : ''}，还空着。`);
 }
 
+function onEmptyCell(cell: number) {
+  onPlotClick(cell);
+}
+
+function onBridge() {
+  if (nextPhase.value) goNextPhase();
+  else ui.toast('已是最后一期，桥那边什么都没有。');
+}
+
 function onGroupClick(code: string) {
   router.push(`/g/${code}`);
 }
@@ -179,6 +208,7 @@ function moveGhost(p: number) {
 }
 
 function onKey(e: KeyboardEvent) {
+  if (viewMode.value === 'map') return;
   if (!session.tomb || !session.ghostOut || cemetery.viewingPhaseId !== phaseId.value) return;
   if (/INPUT|TEXTAREA/.test((document.activeElement as HTMLElement)?.tagName || '')) return;
   const p = session.ghostPlot ?? 0;
@@ -205,7 +235,11 @@ function onKey(e: KeyboardEvent) {
 }
 
 function goMine() {
-  const c = session.tomb?.cell ?? session.ghostPlot;
+  const c = session.tomb?.group?.start_cell ?? session.tomb?.cell ?? session.ghostPlot;
+  if (viewMode.value === 'map' && c != null && session.tomb?.phase?.id === phaseId.value) {
+    gameRef.value?.walkToCell(c);
+    return;
+  }
   if (c != null) moveGhost(c);
   if (session.tomb) router.push(`/t/${session.tomb.code}`);
 }
@@ -270,8 +304,38 @@ watch(
       />
       <div class="road-sign top">
         <button type="button" class="btn sm" @click="goDirectory">← 回园区导览</button>
+        <div class="view-toggle" role="group" aria-label="显示方式">
+          <button
+            type="button"
+            class="btn sm"
+            :class="{ on: viewMode === 'map' }"
+            :aria-pressed="viewMode === 'map'"
+            @click="setViewMode('map')"
+          >
+            地图模式
+          </button>
+          <button
+            type="button"
+            class="btn sm"
+            :class="{ on: viewMode === 'list' }"
+            :aria-pressed="viewMode === 'list'"
+            @click="setViewMode('list')"
+          >
+            列表模式
+          </button>
+        </div>
       </div>
       <div v-if="!grid && cemetery.loading" class="note">加载墓位…</div>
+      <GameMap
+        v-else-if="grid && viewMode === 'map'"
+        ref="gameRef"
+        :key="grid.phase.id"
+        :grid="grid"
+        :has-next="!!nextPhase"
+        @empty="onEmptyCell"
+        @gate="goDirectory"
+        @bridge="onBridge"
+      />
       <div v-else class="grid grid-scroll" id="grid" ref="gridRef">
         <template v-for="i in cells" :key="i - 1">
           <template v-if="!skipSpan.has(i - 1)">
@@ -303,7 +367,7 @@ watch(
           :plot="g.cell ?? undefined"
         />
       </div>
-      <div class="road-sign bottom">
+      <div v-if="viewMode === 'list'" class="road-sign bottom">
         <button
           v-if="nextPhase"
           type="button"
@@ -323,7 +387,20 @@ watch(
 .zone-view .road-sign {
   display: flex;
   justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   margin: 10px 0;
+}
+.view-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+.view-toggle .btn.on {
+  background: var(--joss);
+  border-color: var(--joss);
+  color: #17120a;
+  font-weight: 600;
 }
 .grid-scroll {
   overflow-x: auto;
