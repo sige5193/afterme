@@ -40,6 +40,14 @@ async function fire() {
   const items = { ...cart };
   const msg = message.value.trim();
   const fn = fromName.value.trim() || '一位路过的活人';
+  const tombCode = code.value;
+  const tombName = name.value;
+  const isOwn = own.value;
+  if (!tombCode) {
+    submitting.value = false;
+    ui.toast(api.DEFAULT_ERROR, { err: true });
+    return;
+  }
   if (!session.tomb) {
     try {
       localStorage.setItem('afterme:fromName', fromName.value.trim());
@@ -48,17 +56,17 @@ async function fire() {
     }
   }
   ui.closeModal();
-  ui.burnOverlay = { items, name: name.value };
+  ui.burnOverlay = { items, name: tombName };
   try {
-    await api.createOffering(code.value, {
+    await api.createOffering(tombCode, {
       items,
       message: msg || null,
       from_name: fn,
     });
     // burn overlay finishes separately; toast after overlay closes via App
-    (window as any).__aftermePendingBurnToast = own.value
+    (window as any).__aftermePendingBurnToast = isOwn
       ? '烧给自己了。去香火簿里给自己托个梦吧。'
-      : `已送达 ${name.value}。TA 白天躺在棺材里，天黑后会出来看；有回音会托梦给你，留意顶栏的「我的梦」。`;
+      : `已送达 ${tombName}。TA 白天躺在棺材里，天黑后会出来看；有回音会托梦给你，留意顶栏的「我的梦」。`;
   } catch (e) {
     ui.burnOverlay = null;
     ui.toast(e instanceof api.ApiError ? e.message : api.DEFAULT_ERROR, { err: true });
