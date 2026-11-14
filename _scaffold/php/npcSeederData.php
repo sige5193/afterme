@@ -1,14 +1,15 @@
 <?php
 
 /**
- * 5 位原住民墓碑种子数据（来自原型 NPCS）。
- * died_at 为 ISO UTC（对应 Date.UTC(...)）。
+ * 原住民种子数据。zone_key + cell 为园区第一期固定格子。
+ * died_at 为 ISO UTC。
  */
 return [
     [
         'npc_key' => 'laowang',
         'code' => 'laowang',
-        'plot' => 5,
+        'zone_key' => 'fengshui',
+        'cell' => 5,
         'name' => '隔壁老王',
         'birth_year' => 1971,
         'cause' => '被邻居误会',
@@ -21,7 +22,8 @@ return [
     [
         'npc_key' => 'coder',
         'code' => 'coder',
-        'plot' => 11,
+        'zone_key' => 'worker',
+        'cell' => 11,
         'name' => '某程序员',
         'birth_year' => 1994,
         'cause' => '周五下午发版',
@@ -34,7 +36,8 @@ return [
     [
         'npc_key' => 'juanwang',
         'code' => 'juanwang',
-        'plot' => 16,
+        'zone_key' => 'student',
+        'cell' => 16,
         'name' => '卷王小李',
         'birth_year' => 1999,
         'cause' => '卷死了',
@@ -45,9 +48,24 @@ return [
         'last_words' => '再学五分钟',
     ],
     [
+        'npc_key' => 'duanwang',
+        'code' => 'duanwang',
+        'zone_key' => 'cyber',
+        'cell' => 5,
+        'name' => '断网青年',
+        'birth_year' => 2001,
+        'cause' => '断网超过十分钟',
+        'epitaph' => '有 Wi-Fi 吗',
+        'style' => 'neon',
+        'portrait' => 4,
+        'died_at' => '2025-09-01T00:00:00.000Z',
+        'last_words' => '刷新一下',
+    ],
+    [
         'npc_key' => 'wuming',
         'code' => 'wuming',
-        'plot' => 22,
+        'zone_key' => 'public',
+        'cell' => 22,
         'name' => '无名氏',
         'birth_year' => 1900,
         'cause' => '不详',
@@ -60,7 +78,8 @@ return [
     [
         'npc_key' => 'afei',
         'code' => 'afei',
-        'plot' => 25,
+        'zone_key' => 'public',
+        'cell' => 25,
         'name' => '吃货阿肥',
         'birth_year' => 1990,
         'cause' => '自助餐回本未遂',

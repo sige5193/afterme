@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Group;
 use App\Models\Tomb;
 
 class TombCode
@@ -16,7 +17,10 @@ class TombCode
             for ($i = 0; $i < 6; $i++) {
                 $code .= $alphabet[random_int(0, $max)];
             }
-        } while (Tomb::query()->where('code', $code)->exists());
+        } while (
+            Tomb::query()->where('code', $code)->exists()
+            || Group::query()->where('code', $code)->exists()
+        );
 
         return $code;
     }

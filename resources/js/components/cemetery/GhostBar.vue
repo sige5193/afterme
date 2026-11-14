@@ -23,7 +23,7 @@ const zhashiActive = computed(() => {
   return new Date(t.zhashi_until).getTime() > Date.now();
 });
 
-const myAddress = computed(() => address(session.tomb?.plot ?? 0));
+const myAddress = computed(() => session.tomb?.address || address(session.tomb?.cell ?? 0));
 
 function tickZs() {
   const t = session.tomb;

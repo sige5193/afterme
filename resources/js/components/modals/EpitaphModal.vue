@@ -29,7 +29,6 @@ async function save() {
     const res = await api.patchEpitaph({ epitaph: v });
     session.setTomb(res.tomb);
     if (cemetery.detail?.id === res.tomb.id) cemetery.detail = res.tomb;
-    cemetery.upsertListItem(res.tomb);
     ui.closeModal();
     ui.toast('刻好了。');
   } catch (e) {

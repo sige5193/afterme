@@ -1,56 +1,106 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import * as api from '@/api/client';
-import type { TombDetail, TombListItem } from '@/api/types';
-import { COLS } from '@/utils/time';
+import type { GridCell, GroupDetail, PhaseGrid, TombDetail, ZoneInfo } from '@/api/types';
 import { useSessionStore } from './session';
 import { useUiStore } from './ui';
 
 export const useCemeteryStore = defineStore('cemetery', () => {
-  const tombs = ref<TombListItem[]>([]);
   const detail = ref<TombDetail | null>(null);
   const openCode = ref<string | null>(null);
-  const tombsVersion = ref<string | null>(null);
   const loading = ref(false);
+  const gridByPhaseId = ref<Record<number, PhaseGrid>>({});
+  const viewingPhaseId = ref<number | null>(null);
+  const zonesList = ref<ZoneInfo[]>([]);
+  const groupDetail = ref<GroupDetail | null>(null);
+  const openGroupCode = ref<string | null>(null);
+  const phaseVersion = ref<string | null>(null);
+  const highlightMemberCode = ref<string | null>(null);
 
-  const byPlot = computed(() => {
-    const m = new Map<number, TombListItem>();
-    for (const t of tombs.value) m.set(t.plot, t);
+  const currentGrid = computed(() =>
+    viewingPhaseId.value != null ? (gridByPhaseId.value[viewingPhaseId.value] ?? null) : null,
+  );
+
+  const gridCellMap = computed(() => {
+    const m = new Map<number, GridCell>();
+    for (const c of currentGrid.value?.cells ?? []) m.set(c.cell, c);
     return m;
   });
 
-  const maxPlot = computed(() => {
-    let mx = -1;
-    for (const t of tombs.value) if (t.plot > mx) mx = t.plot;
-    return mx;
+  const occupiedCells = computed(() => {
+    const s = new Set<number>();
+    for (const c of currentGrid.value?.cells ?? []) {
+      if (c.type !== 'empty') s.add(c.cell);
+      if (c.type === 'group' && c.group) {
+        for (let i = 0; i < c.group.width; i++) s.add(c.cell + i);
+      }
+    }
+    return s;
   });
 
-  /** 最少 30；接近上限时多一排 */
-  const totalPlots = computed(() => {
-    const base = 30;
-    const need = maxPlot.value + 1;
-    if (need <= base) return base;
-    const rows = Math.ceil(need / COLS);
-    return Math.max(base, rows * COLS);
-  });
+  function groupSpanSkip(cells: GridCell[]): Set<number> {
+    const skip = new Set<number>();
+    for (const c of cells) {
+      if (c.type === 'group' && c.group) {
+        for (let i = 1; i < c.group.width; i++) skip.add(c.cell + i);
+      }
+    }
+    return skip;
+  }
 
-  const npcCount = computed(() => tombs.value.filter((t) => t.is_npc).length);
-  const humanCount = computed(() => tombs.value.filter((t) => !t.is_npc).length);
-
-  const occupiedPlots = computed(() => new Set(tombs.value.map((t) => t.plot)));
-
-  async function fetchTombs() {
+  async function fetchGrid(phaseId: number, force = false) {
+    if (!force && gridByPhaseId.value[phaseId]) {
+      viewingPhaseId.value = phaseId;
+      phaseVersion.value = gridByPhaseId.value[phaseId].version;
+      return gridByPhaseId.value[phaseId];
+    }
     loading.value = true;
     try {
-      tombs.value = await api.listTombs();
+      const grid = await api.getPhaseGrid(phaseId);
+      gridByPhaseId.value = { ...gridByPhaseId.value, [phaseId]: grid };
+      viewingPhaseId.value = phaseId;
+      phaseVersion.value = grid.version;
+      return grid;
     } catch {
       useUiStore().toast(api.DEFAULT_ERROR, { err: true });
+      return null;
     } finally {
       loading.value = false;
     }
   }
 
+  async function fetchZones() {
+    try {
+      zonesList.value = await api.listZones();
+    } catch {
+      useUiStore().toast(api.DEFAULT_ERROR, { err: true });
+    }
+  }
+
   async function openTomb(code: string) {
+    openGroupCode.value = null;
+    groupDetail.value = null;
+    openCode.value = code;
+    try {
+      const tomb = await api.getTomb(code);
+      if (tomb.group?.code) {
+        highlightMemberCode.value = code;
+        openCode.value = null;
+        detail.value = null;
+        await openGroup(tomb.group.code);
+        return;
+      }
+      detail.value = tomb;
+    } catch {
+      useUiStore().toast(api.DEFAULT_ERROR, { err: true });
+      detail.value = null;
+    }
+  }
+
+  async function openTombDirect(code: string) {
+    highlightMemberCode.value = null;
+    openGroupCode.value = null;
+    groupDetail.value = null;
     openCode.value = code;
     try {
       detail.value = await api.getTomb(code);
@@ -63,45 +113,55 @@ export const useCemeteryStore = defineStore('cemetery', () => {
   function closeDrawer() {
     openCode.value = null;
     detail.value = null;
+    highlightMemberCode.value = null;
   }
 
-  function findByCode(code: string) {
-    return tombs.value.find((t) => t.code === code) ?? null;
+  async function openGroup(code: string) {
+    openCode.value = null;
+    detail.value = null;
+    openGroupCode.value = code;
+    try {
+      groupDetail.value = await api.getGroup(code);
+      const phaseId = groupDetail.value.phase?.id;
+      if (phaseId) await fetchGrid(phaseId);
+    } catch {
+      useUiStore().toast(api.DEFAULT_ERROR, { err: true });
+      groupDetail.value = null;
+    }
   }
 
-  function findById(id: number) {
-    return tombs.value.find((t) => t.id === id) ?? null;
+  function closeGroupDrawer() {
+    openGroupCode.value = null;
+    groupDetail.value = null;
+    highlightMemberCode.value = null;
   }
 
-  function myPlot(): number | null {
-    const session = useSessionStore();
-    return session.tomb?.plot ?? null;
-  }
-
-  function upsertListItem(t: TombListItem) {
-    const i = tombs.value.findIndex((x) => x.id === t.id);
-    if (i >= 0) tombs.value[i] = { ...tombs.value[i], ...t };
-    else tombs.value = [...tombs.value, t];
+  function myCell(): number | null {
+    return useSessionStore().tomb?.cell ?? null;
   }
 
   return {
-    tombs,
     detail,
     openCode,
-    tombsVersion,
     loading,
-    byPlot,
-    maxPlot,
-    totalPlots,
-    npcCount,
-    humanCount,
-    occupiedPlots,
-    fetchTombs,
+    gridByPhaseId,
+    viewingPhaseId,
+    zonesList,
+    groupDetail,
+    openGroupCode,
+    phaseVersion,
+    highlightMemberCode,
+    currentGrid,
+    gridCellMap,
+    occupiedCells,
+    groupSpanSkip,
+    fetchGrid,
+    fetchZones,
     openTomb,
+    openTombDirect,
     closeDrawer,
-    findByCode,
-    findById,
-    myPlot,
-    upsertListItem,
+    openGroup,
+    closeGroupDrawer,
+    myCell,
   };
 });

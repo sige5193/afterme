@@ -16,7 +16,8 @@ class Presence extends Model
     protected $fillable = [
         'user_id',
         'mode',
-        'plot',
+        'zone_phase_id',
+        'cell',
         'viewing_tomb_id',
         'seen_at',
     ];
@@ -24,7 +25,8 @@ class Presence extends Model
     protected function casts(): array
     {
         return [
-            'plot' => 'integer',
+            'cell' => 'integer',
+            'zone_phase_id' => 'integer',
             'viewing_tomb_id' => 'integer',
             'seen_at' => 'datetime',
         ];
@@ -38,5 +40,10 @@ class Presence extends Model
     public function viewingTomb(): BelongsTo
     {
         return $this->belongsTo(Tomb::class, 'viewing_tomb_id');
+    }
+
+    public function phase(): BelongsTo
+    {
+        return $this->belongsTo(ZonePhase::class, 'zone_phase_id');
     }
 }

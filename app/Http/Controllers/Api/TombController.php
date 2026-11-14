@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\KnockRequest;
+use App\Http\Requests\Api\MoveTombRequest;
 use App\Http\Requests\Api\StoreTombRequest;
 use App\Http\Requests\Api\UpdateEpitaphRequest;
 use App\Models\Tomb;
+use App\Models\User;
+use App\Models\ZonePhase;
 use App\Support\DayNight;
 use App\Support\OfferingStats;
+use App\Support\PlotAllocator;
 use App\Support\ResurrectCode;
+use App\Support\TombAddress;
 use App\Support\TombCode;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,29 +24,15 @@ use Illuminate\Support\Facades\DB;
 
 class TombController extends Controller
 {
-    public function index(): JsonResponse
-    {
-        $hotIds = DB::table('offerings')
-            ->where('created_at', '>=', now()->subDay())
-            ->distinct()
-            ->pluck('tomb_id')
-            ->all();
-        $hotSet = array_fill_keys($hotIds, true);
-
-        $tombs = Tomb::query()
-            ->with('user:id,last_seen_at')
-            ->orderBy('plot')
-            ->get()
-            ->map(fn (Tomb $tomb) => $tomb->toListArray(isset($hotSet[$tomb->id])))
-            ->values();
-
-        return response()->json(['tombs' => $tombs]);
-    }
-
     public function show(string $code): JsonResponse
     {
         $tomb = Tomb::query()
-            ->with('user:id,last_seen_at')
+            ->with([
+                'user:id,last_seen_at',
+                'plotCell.phase.zone',
+                'group.phase.zone',
+                'pastGroupMemberships',
+            ])
             ->where('code', $code)
             ->first();
 
@@ -58,7 +49,7 @@ class TombController extends Controller
 
     public function store(StoreTombRequest $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $data = $request->validated();
 
@@ -68,18 +59,7 @@ class TombController extends Controller
                 $resurrectCode = null;
 
                 if ($existing) {
-                    if ((int) $existing->plot !== (int) $data['plot']) {
-                        $taken = Tomb::query()
-                            ->where('plot', $data['plot'])
-                            ->where('id', '!=', $existing->id)
-                            ->exists();
-                        if ($taken) {
-                            throw new HttpResponseException(
-                                response()->json(['message' => '这块刚被人占了'], 409)
-                            );
-                        }
-                    }
-
+                    // 重办葬礼：位置不变
                     $existing->fill([
                         'name' => $data['name'],
                         'birth_year' => $data['birth_year'],
@@ -87,7 +67,6 @@ class TombController extends Controller
                         'portrait' => $data['portrait'],
                         'last_words' => $data['last_words'] ?? null,
                         'style' => $data['style'],
-                        'plot' => $data['plot'],
                         'epitaph' => $data['epitaph'],
                         'epitaph_edits' => 0,
                         'eulogy' => $data['eulogy'],
@@ -100,10 +79,16 @@ class TombController extends Controller
                     $existing->save();
                     $tomb = $existing;
                 } else {
-                    $taken = Tomb::query()->where('plot', $data['plot'])->exists();
-                    if ($taken) {
+                    if (! isset($data['zone_phase_id'], $data['cell'])) {
                         throw new HttpResponseException(
-                            response()->json(['message' => '这块刚被人占了'], 409)
+                            response()->json(['message' => '请选择墓位'], 422)
+                        );
+                    }
+
+                    $phase = ZonePhase::query()->with('zone')->find($data['zone_phase_id']);
+                    if (! $phase || $phase->zone?->is_group_zone) {
+                        throw new HttpResponseException(
+                            response()->json(['message' => '合葬区不能直接下葬'], 422)
                         );
                     }
 
@@ -118,7 +103,9 @@ class TombController extends Controller
                         'portrait' => $data['portrait'],
                         'last_words' => $data['last_words'] ?? null,
                         'style' => $data['style'],
-                        'plot' => $data['plot'],
+                        'home_zone_id' => $phase->zone_id,
+                        'group_id' => null,
+                        'move_count' => 0,
                         'epitaph' => $data['epitaph'],
                         'epitaph_edits' => 0,
                         'eulogy' => $data['eulogy'],
@@ -132,6 +119,8 @@ class TombController extends Controller
                         'died_at' => now(),
                     ]);
 
+                    PlotAllocator::occupy($tomb, $phase, (int) $data['cell']);
+
                     if (! $user->resurrect_code_hash) {
                         $raw = ResurrectCode::generate();
                         $user->forceFill([
@@ -141,7 +130,7 @@ class TombController extends Controller
                     }
                 }
 
-                return [$tomb->fresh(), $resurrectCode];
+                return [$tomb->fresh(['plotCell.phase.zone', 'group', 'pastGroupMemberships']), $resurrectCode];
             });
         } catch (QueryException $e) {
             if ($this->isUniqueViolation($e)) {
@@ -162,9 +151,45 @@ class TombController extends Controller
         return response()->json($payload);
     }
 
+    public function move(MoveTombRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $tomb = $user->tomb;
+        if (! $tomb) {
+            return response()->json(['message' => '阴间服务器开小差了…'], 422);
+        }
+        if ($tomb->group_id) {
+            return response()->json(['message' => '请先迁出合葬墓'], 422);
+        }
+        if (! DayNight::ghostOut($user, $tomb)) {
+            return response()->json(['message' => '白天扛不动棺材，夜里再迁'], 422);
+        }
+
+        $phase = ZonePhase::query()->with('zone')->find($request->integer('zone_phase_id'));
+        if (! $phase || $phase->zone?->is_group_zone) {
+            return response()->json(['message' => '合葬区不能单独迁坟'], 422);
+        }
+
+        try {
+            $cell = PlotAllocator::moveTomb($tomb, $phase, $request->integer('cell'));
+        } catch (QueryException $e) {
+            if ($this->isUniqueViolation($e)) {
+                return response()->json(['message' => '这块刚被人占了'], 409);
+            }
+            throw $e;
+        }
+
+        $tomb = $tomb->fresh(['plotCell.phase.zone', 'pastGroupMemberships']);
+
+        return response()->json([
+            'tomb' => $tomb->toDetailArray(OfferingStats::forTomb($tomb)),
+            'address' => TombAddress::forCell($cell),
+        ]);
+    }
+
     public function updateEpitaph(UpdateEpitaphRequest $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $tomb = $user->tomb;
 
@@ -185,13 +210,13 @@ class TombController extends Controller
         }
 
         return response()->json([
-            'tomb' => $tomb->fresh()->toDetailArray(OfferingStats::forTomb($tomb)),
+            'tomb' => $tomb->fresh(['plotCell.phase.zone', 'group', 'pastGroupMemberships'])->toDetailArray(OfferingStats::forTomb($tomb)),
         ]);
     }
 
     public function zhashi(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $tomb = $user->tomb;
 
@@ -215,7 +240,7 @@ class TombController extends Controller
 
     public function knock(KnockRequest $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $tomb = $user->tomb;
 

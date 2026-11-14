@@ -11,6 +11,8 @@ class Dream extends Model
 
     protected $fillable = [
         'offering_id',
+        'kind',
+        'join_request_id',
         'tomb_id',
         'to_user_id',
         'text',
@@ -44,11 +46,18 @@ class Dream extends Model
         return $this->belongsTo(User::class, 'to_user_id');
     }
 
+    public function joinRequest(): BelongsTo
+    {
+        return $this->belongsTo(JoinRequest::class);
+    }
+
     public function toApiArray(): array
     {
         return [
             'id' => $this->id,
             'offering_id' => $this->offering_id,
+            'kind' => $this->kind ?? 'reply',
+            'join_request_id' => $this->join_request_id,
             'tomb_id' => $this->tomb_id,
             'to_user_id' => $this->to_user_id,
             'text' => $this->text,
@@ -56,6 +65,10 @@ class Dream extends Model
             'visible_at' => optional($this->visible_at)?->toIso8601String(),
             'read_at' => optional($this->read_at)?->toIso8601String(),
             'created_at' => optional($this->created_at)?->toIso8601String(),
+            'tomb' => $this->relationLoaded('tomb') && $this->tomb ? [
+                'code' => $this->tomb->code,
+                'name' => $this->tomb->name,
+            ] : null,
         ];
     }
 }

@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue';
 import Modal from '@/components/layout/Modal.vue';
 import * as api from '@/api/client';
+import type { Dream } from '@/api/types';
 import { itemsText, useOfferingsStore } from '@/stores/offerings';
 import { useUiStore } from '@/stores/ui';
 import { ago } from '@/utils/time';
@@ -14,7 +15,10 @@ onMounted(() => {
 });
 
 const sent = computed(() => offerings.dreams);
-const replied = computed(() => offerings.dreams.filter((d) => d.dream));
+const special = computed(() => offerings.specialDreams);
+const repliedCount = computed(() =>
+  offerings.dreams.reduce((n, d) => n + (d.dreams?.length || (d.dream ? 1 : 0)), 0),
+);
 
 function offeringItems(b: (typeof offerings.dreams)[0]['offering']) {
   if (Array.isArray(b.items)) {
@@ -25,17 +29,25 @@ function offeringItems(b: (typeof offerings.dreams)[0]['offering']) {
   return b.items;
 }
 
-function openDream(row: (typeof offerings.dreams)[0]) {
-  if (!row.dream) return;
+function openDream(d: Dream, playUnion = false) {
   ui.closeModal();
   ui.dreamOverlay = {
-    text: row.dream.text,
-    style: row.dream.style,
-    fromName: row.dream.tomb_name || '某位故人',
-    at: new Date(row.dream.visible_at || row.dream.created_at).getTime(),
-    id: row.dream.id,
+    text: d.text,
+    style: d.style,
+    fromName: d.tomb_name || d.tomb?.name || '某位故人',
+    at: new Date(d.visible_at || d.created_at).getTime(),
+    id: d.id,
   };
-  void api.markDreamRead(row.dream.id);
+  void api.markDreamRead(d.id);
+  if (playUnion && d.kind === 'join_result') {
+    setTimeout(() => {
+      ui.unionOverlay = true;
+    }, 400);
+  }
+}
+
+function targetName(row: (typeof offerings.dreams)[0]) {
+  return row.offering.group?.name || row.offering.tomb?.name || row.dream?.tomb_name || '某位故人';
 }
 
 function resurrect() {
@@ -47,22 +59,42 @@ function resurrect() {
 <template>
   <Modal @close="ui.closeModal()">
     <h2>我的梦</h2>
-    <p class="sub">你烧过 {{ sent.length }} 次纸，收到 {{ replied.length }} 个梦。</p>
+    <p class="sub">你烧过 {{ sent.length }} 次纸，收到 {{ repliedCount }} 个梦。</p>
+
+    <template v-if="special.length">
+      <h3 class="brush" style="font-size: 22px; margin: 12px 0 8px">结伴帖的回音</h3>
+      <ul class="list">
+        <li v-for="d in special" :key="'sp-' + d.id" class="bl">
+          <div class="bl-h">
+            <b>{{ d.kind === 'system' ? '系统消息' : d.tomb?.name || '回音' }}</b>
+            <time>{{ ago(new Date(d.visible_at || d.created_at).getTime()) }}</time>
+          </div>
+          <p class="bl-msg">{{ d.text }}</p>
+          <div class="bl-f">
+            <button class="btn sm primary" @click="openDream(d, d.kind === 'join_result')">
+              {{ d.read_at ? '再看一次' : '去做梦' }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </template>
+
     <ul v-if="sent.length" class="list">
       <li v-for="row in sent" :key="row.offering.id" class="bl">
         <div class="bl-h">
-          <b>给 {{ row.dream?.tomb_name || '某位故人' }}</b>
+          <b>给 {{ targetName(row) }}</b>
           <time>{{ ago(new Date(row.offering.created_at).getTime()) }}</time>
         </div>
         <div class="bl-items">烧了 {{ itemsText(offeringItems(row.offering)) }}</div>
-        <div class="bl-f">
-          <template v-if="row.dream">
-            <span class="ok">{{ row.dream.read_at ? 'TA 托过梦' : 'TA 托梦了，还没做' }}</span>
-            <button class="btn sm primary" @click="openDream(row)">
-              {{ row.dream.read_at ? '再梦一次' : '去做梦' }}
-            </button>
-          </template>
-          <span v-else>还没回音。鬼白天睡觉，晚上才出来。</span>
+        <div v-if="row.dreams?.length" class="note">
+          <div v-for="d in row.dreams" :key="d.id" style="margin-top: 4px">
+            {{ d.tomb?.name || d.tomb_name || '有人' }}
+            {{ d.read_at ? '托过梦了' : '托梦了' }}
+            <button class="btn sm" style="margin-left: 6px" @click="openDream(d)">去做梦</button>
+          </div>
+        </div>
+        <div v-else class="bl-f">
+          <span>还没回音。鬼白天睡觉，晚上才出来。</span>
         </div>
       </li>
     </ul>

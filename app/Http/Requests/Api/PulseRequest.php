@@ -17,7 +17,8 @@ class PulseRequest extends FormRequest
         return [
             'since' => ['nullable', 'date'],
             'mode' => ['required', Rule::in(['ghost', 'coffin', 'living'])],
-            'plot' => ['nullable', 'integer', 'min:0'],
+            'zone_phase_id' => ['nullable', 'integer', 'exists:zone_phases,id'],
+            'cell' => ['nullable', 'integer', 'min:0', 'max:59'],
             'viewing_tomb_id' => ['nullable', 'integer', 'exists:tombs,id'],
         ];
     }

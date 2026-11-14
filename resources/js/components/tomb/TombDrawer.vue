@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import StoneBig from './StoneBig.vue';
 import { ITEM } from '@/config/items';
-import { address, ago, ymd } from '@/utils/time';
+import { ago, ymd } from '@/utils/time';
 import { useCemeteryStore } from '@/stores/cemetery';
 import { useSessionStore } from '@/stores/session';
 import { useUiStore } from '@/stores/ui';
@@ -34,15 +34,34 @@ const marks = computed(() => {
   const m: string[] = [];
   if (!t.value) return m;
   if (t.value.zhashi_count) m.push(`该鬼曾白天诈尸 ${t.value.zhashi_count} 次`);
+  if (t.value.move_count) m.push(`迁过 ${t.value.move_count} 次坟`);
   if (t.value.knock_count) m.push(`棺材板被敲响 ${t.value.knock_count} 次`);
   if (t.value.funerals > 1) m.push(`办过 ${t.value.funerals} 次葬礼`);
   if (t.value.is_orphan) m.push('孤坟');
+  for (const g of t.value.past_groups || []) {
+    if (g.name_snapshot) m.push(`曾与 ${g.name_snapshot} 合葬`);
+  }
   return m;
+});
+
+const canAskJoin = computed(() => {
+  if (!session.tomb || own.value || !t.value) return false;
+  if (t.value.group) return false;
+  if (session.tomb.group && (session.tomb.group.member_count ?? 0) >= 6) return false;
+  return true;
+});
+
+const joinDisabledReason = computed(() => {
+  if (!session.tomb) return '';
+  if (!session.ghostOut) return '夜里才能递结伴帖';
+  if (t.value?.group) return 'TA 已经和别人合葬了，得先迁出来';
+  if (session.tomb.group && (session.tomb.group.member_count ?? 0) >= 6) return '满员了';
+  return '';
 });
 
 function close() {
   cemetery.closeDrawer();
-  if (router.currentRoute.value.name === 'tomb') router.push('/');
+  if (router.currentRoute.value.name === 'tomb') router.push(session.tomb ? '/mine' : '/zones');
 }
 
 function burn() {
@@ -67,12 +86,26 @@ function refuneral() {
   router.push('/funeral');
 }
 
-watch(
-  () => ui.shakeStone,
-  (v) => {
-    /* class bound below */
-  },
-);
+function moveTomb() {
+  if (session.tomb?.group) {
+    ui.openModal('leaveGroup');
+    return;
+  }
+  if (!session.ghostOut) {
+    ui.toast('白天扛不动棺材，夜里再迁');
+    return;
+  }
+  ui.openModal('moveTomb');
+}
+
+function askJoin() {
+  if (!t.value) return;
+  if (joinDisabledReason.value) {
+    ui.toast(joinDisabledReason.value);
+    return;
+  }
+  ui.openModal('joinRequest', { code: t.value.code, name: t.value.name });
+}
 </script>
 
 <template>
@@ -80,7 +113,7 @@ watch(
     <template v-if="t">
       <div class="dr-head">
         <span>
-          {{ t.is_npc ? '原住民' : own ? '我的坟' : '新坟' }} · {{ address(t.plot) }}
+          {{ t.is_npc ? '原住民' : own ? '我的坟' : '新坟' }} · {{ t.address || '未知墓址' }}
         </span>
         <button class="x" aria-label="关闭" @click="close">✕</button>
       </div>
@@ -127,12 +160,17 @@ watch(
       </div>
       <div class="dr-acts">
         <template v-if="own">
-          <button class="btn primary" @click="openInbox">
-            香火簿 · {{ t.offering_count }} 次
-          </button>
+          <button class="btn primary" @click="openInbox">香火簿 · {{ t.offering_count }} 次</button>
           <button class="btn" :disabled="!session.ghostOut" @click="openEpitaph">改碑文</button>
           <button class="btn" @click="burn">给自己烧点</button>
           <button class="btn" @click="invite">邀请烧纸</button>
+          <button
+            class="btn"
+            :disabled="!!session.tomb?.group ? false : !session.ghostOut"
+            @click="moveTomb"
+          >
+            {{ session.tomb?.group ? '迁出合葬墓' : '迁坟' }}
+          </button>
           <button class="btn quiet" @click="refuneral">重办葬礼</button>
           <button
             class="btn quiet"
@@ -150,6 +188,15 @@ watch(
           <button class="btn primary" @click="burn">
             {{ session.tomb ? '串门 · 烧纸' : '烧纸' }}
           </button>
+          <button
+            v-if="session.tomb"
+            class="btn"
+            :disabled="!canAskJoin || !session.ghostOut || !!joinDisabledReason"
+            @click="askJoin"
+          >
+            求合葬
+          </button>
+          <div v-if="session.tomb && joinDisabledReason" class="note">{{ joinDisabledReason }}</div>
         </template>
       </div>
       <div v-if="own && !session.ghostOut" class="why">

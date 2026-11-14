@@ -13,8 +13,10 @@ export const usePulseStore = defineStore('pulse', () => {
   const since = ref<string | null>(null);
   const pendingDreamsCount = ref(0);
   const unreadDreamsCount = ref(0);
+  const zoneGhosts = ref<Record<string, number>>({});
   const knownOfferingIds = ref(new Set<number>());
   const knownDreamIds = ref(new Set<number>());
+  const knownJoinIds = ref(new Set<number>());
   const primed = ref(false);
   const lastViewKnockAt = ref<string | null>(null);
 
@@ -35,7 +37,7 @@ export const usePulseStore = defineStore('pulse', () => {
     const s = session();
     const c = cemetery();
     const u = ui();
-    if (c.openCode) return true;
+    if (c.openCode || c.openGroupCode) return true;
     if (s.tomb && s.ghostOut && u.pref === 'cemetery') return true;
     return false;
   });
@@ -52,7 +54,8 @@ export const usePulseStore = defineStore('pulse', () => {
       res = await api.pulse({
         since: since.value,
         mode: mode.value,
-        plot: mode.value === 'ghost' ? s.ghostPlot : null,
+        zone_phase_id: c.viewingPhaseId,
+        cell: mode.value === 'ghost' ? s.ghostPlot : null,
         viewing_tomb_id: viewingId,
       });
     } catch {
@@ -66,40 +69,60 @@ export const usePulseStore = defineStore('pulse', () => {
 
     pendingDreamsCount.value = res.pending_dreams_count;
     unreadDreamsCount.value = res.unread_dreams_count;
+    zoneGhosts.value = res.zone_ghosts ?? {};
     presence().apply(res.ghosts, res.living_count);
 
-    if (res.tombs_version && res.tombs_version !== c.tombsVersion) {
-      c.tombsVersion = res.tombs_version;
-      if (primed.value) await c.fetchTombs();
-      else c.tombsVersion = res.tombs_version;
+    if (c.viewingPhaseId && res.phase_version && res.phase_version !== c.phaseVersion) {
+      c.phaseVersion = res.phase_version;
+      if (primed.value) await c.fetchGrid(c.viewingPhaseId, true);
     }
 
-    // offerings toasts
     for (const o of res.new_offerings) {
       if (knownOfferingIds.value.has(o.id)) continue;
       knownOfferingIds.value.add(o.id);
       if (!primed.value) continue;
       const prefix = ui().pref === 'coffin' ? '头顶传来烧纸声……' : '';
-      ui().toast(
-        `${prefix}${o.from_name || '有人'}给你烧了 ${itemsText(o.items)}`,
-        {
-          btn: '看看',
-          onBtn: () => {
-            if (ui().pref !== 'coffin') ui().openModal('inbox');
-          },
+      ui().toast(`${prefix}${o.from_name || '有人'}给你烧了 ${itemsText(o.items)}`, {
+        btn: '看看',
+        onBtn: () => {
+          if (ui().pref !== 'coffin') ui().openModal('inbox');
         },
-      );
+      });
     }
 
     for (const d of res.new_dreams) {
       if (knownDreamIds.value.has(d.id)) continue;
       knownDreamIds.value.add(d.id);
       if (!primed.value) continue;
-      // 托给自己的梦不弹
+      if (d.kind === 'join_result') {
+        ui().toast('有人回了你的结伴帖', {
+          btn: '去做梦',
+          onBtn: () => {
+            ui().dreamOverlay = {
+              text: d.text,
+              style: d.style,
+              fromName: d.tomb?.name || d.tomb_name || '故人',
+              at: new Date(d.visible_at || d.created_at).getTime(),
+              id: d.id,
+            };
+            void api.markDreamRead(d.id);
+            if (d.text && !/下辈子|八字|不想|驳回|没空|没人|连上网|自助/.test(d.text)) {
+              /* accept-ish: show union after dream close handled elsewhere */
+            }
+          },
+          ms: 8000,
+        });
+        continue;
+      }
+      if (d.kind === 'system') {
+        ui().toast(d.text, { ms: 8000 });
+        void api.markDreamRead(d.id);
+        continue;
+      }
       if (s.tomb && d.tomb_id === s.tomb.id && d.to_user_id === s.user?.id) {
-        /* self-dream: skip toast */
+        /* skip */
       } else {
-        const name = d.tomb_name || '某位故人';
+        const name = d.tomb_name || d.tomb?.name || '某位故人';
         ui().toast(`${name}给你托梦了。`, {
           btn: '去做梦',
           onBtn: () => {
@@ -117,6 +140,22 @@ export const usePulseStore = defineStore('pulse', () => {
       }
     }
 
+    for (const j of res.new_join_requests ?? []) {
+      if (knownJoinIds.value.has(j.id)) continue;
+      knownJoinIds.value.add(j.id);
+      if (!primed.value) continue;
+      const name = j.from_tomb?.name || '有人';
+      ui().toast(`${name} 给你递了一张结伴帖`, {
+        btn: '看看',
+        onBtn: () => ui().openModal('inbox'),
+      });
+    }
+
+    for (const p of res.new_phases ?? []) {
+      if (!primed.value) continue;
+      ui().toast(`${p.label || p.zone_name + '二期'}开盘了`);
+    }
+
     if (res.viewing_tomb) {
       const lk = res.viewing_tomb.last_knock_at;
       if (lk && lk !== lastViewKnockAt.value) {
@@ -126,7 +165,6 @@ export const usePulseStore = defineStore('pulse', () => {
             ui().shakeStone = false;
           }, 500);
           ui().toast('棺材里传来“咚、咚、咚”的声音……');
-          // sound via App
           window.dispatchEvent(new CustomEvent('afterme:knock-sound'));
         }
         lastViewKnockAt.value = lk;
@@ -135,9 +173,7 @@ export const usePulseStore = defineStore('pulse', () => {
       lastViewKnockAt.value = null;
     }
 
-    // day/night transition toasts
     handleDayNightShift(res);
-
     primed.value = true;
   }
 
@@ -169,6 +205,7 @@ export const usePulseStore = defineStore('pulse', () => {
     primed.value = false;
     knownOfferingIds.value = new Set();
     knownDreamIds.value = new Set();
+    knownJoinIds.value = new Set();
     lastViewKnockAt.value = null;
   }
 
@@ -176,6 +213,7 @@ export const usePulseStore = defineStore('pulse', () => {
     since,
     pendingDreamsCount,
     unreadDreamsCount,
+    zoneGhosts,
     mode,
     activePolling,
     sendPulse,

@@ -21,7 +21,13 @@ export type ModalKind =
   | 'epitaph'
   | 'zhashi'
   | 'resurrect'
-  | 'resurrectCode';
+  | 'resurrectCode'
+  | 'joinRequest'
+  | 'joinRespond'
+  | 'moveTomb'
+  | 'leaveGroup'
+  | 'groupSettings'
+  | 'groupMove';
 
 let toastSeq = 1;
 
@@ -46,6 +52,7 @@ export const useUiStore = defineStore('ui', () => {
   const funeralPrefill = ref<{ plot?: number }>({});
   const shakeStone = ref(false);
   const shakePlot = ref<number | null>(null);
+  const unionOverlay = ref(false);
 
   try {
     const s = localStorage.getItem('afterme:sound');
@@ -112,6 +119,7 @@ export const useUiStore = defineStore('ui', () => {
     funeralPrefill,
     shakeStone,
     shakePlot,
+    unionOverlay,
     toast,
     openModal,
     closeModal,

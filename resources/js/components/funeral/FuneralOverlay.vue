@@ -6,7 +6,6 @@ import StepPick from './StepPick.vue';
 import StepEpitaph from './StepEpitaph.vue';
 import Ceremony from './Ceremony.vue';
 import { COUPLETS, makeEulogy, VERDICTS } from '@/config/funeralText';
-import { SPECIAL } from '@/config/specialPlots';
 import { pick } from '@/utils/text';
 import * as api from '@/api/client';
 import { useCemeteryStore } from '@/stores/cemetery';
@@ -25,16 +24,7 @@ const err = ref('');
 const ceremonyRef = ref<InstanceType<typeof Ceremony> | null>(null);
 
 const prev = session.tomb;
-const taken = cemetery.occupiedPlots;
-let plot = ui.funeralPrefill.plot ?? prev?.plot;
-if (plot == null || (taken.has(plot) && plot !== prev?.plot)) {
-  const specials = Object.keys(SPECIAL).map(Number);
-  plot = specials.find((p) => !taken.has(p));
-  if (plot == null) {
-    plot = 0;
-    while (taken.has(plot)) plot++;
-  }
-}
+const prefill = ui.funeralPrefill as { cell?: number; zoneKey?: string; zonePhaseId?: number };
 
 const F = reactive({
   name: prev?.name || '',
@@ -43,7 +33,10 @@ const F = reactive({
   portrait: prev?.portrait ?? 0,
   lastWords: prev?.last_words || '',
   style: (prev?.style || 'qingshi') as string,
-  plot: plot as number,
+  zoneKey: prefill.zoneKey || prev?.zone?.key || 'public',
+  zonePhaseId: (prefill.zonePhaseId ?? prev?.phase?.id ?? null) as number | null,
+  cell: (prefill.cell ?? prev?.cell ?? 0) as number,
+  styleTouched: !!prev,
   epitaph: prev?.epitaph || '',
   eulogy: '',
   verdict: '',
@@ -97,22 +90,28 @@ function close() {
 async function save() {
   ceremonyRef.value?.setSaving(true);
   try {
-    const res = await api.saveTomb({
+    const payload: Parameters<typeof api.saveTomb>[0] = {
       name: F.name,
       birth_year: +F.birthYear,
       cause: F.cause,
       portrait: F.portrait,
       last_words: F.lastWords || null,
       style: F.style as StoneStyleKey,
-      plot: F.plot,
       epitaph: F.epitaph,
       eulogy: F.eulogy,
       verdict: F.verdict,
       couplet: F.couplet,
-    });
+    };
+    if (!prev) {
+      if (!F.zonePhaseId && F.zonePhaseId !== 0) {
+        throw new Error('请选择墓位');
+      }
+      payload.zone_phase_id = F.zonePhaseId!;
+      payload.cell = F.cell;
+    }
+    const res = await api.saveTomb(payload);
     session.setTomb(res.tomb);
-    cemetery.upsertListItem(res.tomb);
-    await cemetery.fetchTombs();
+    await cemetery.fetchZones();
     ui.funeralOpen = false;
     session.ghostPlot = null;
 
@@ -159,7 +158,7 @@ async function save() {
   } catch (e) {
     if (e instanceof api.ApiError && e.status === 409) {
       ceremonyRef.value?.setSaveError(e.message || '这块刚被人占了');
-      await cemetery.fetchTombs();
+      await cemetery.fetchZones();
       step.value = 1;
       return;
     }

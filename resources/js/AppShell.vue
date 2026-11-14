@@ -3,9 +3,14 @@ import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TopBar from '@/components/layout/TopBar.vue';
 import ToastStack from '@/components/layout/ToastStack.vue';
-import CemeteryView from '@/components/cemetery/CemeteryView.vue';
+import ZoneDirectory from '@/components/cemetery/ZoneDirectory.vue';
+import ZoneView from '@/components/cemetery/ZoneView.vue';
+import Hero from '@/components/cemetery/Hero.vue';
 import TombDrawer from '@/components/tomb/TombDrawer.vue';
+import GroupDrawer from '@/components/tomb/GroupDrawer.vue';
 import CoffinView from '@/components/coffin/CoffinView.vue';
+import MyCemetery from '@/views/MyCemetery.vue';
+import SearchView from '@/views/SearchView.vue';
 import FuneralOverlay from '@/components/funeral/FuneralOverlay.vue';
 import BurnModal from '@/components/modals/BurnModal.vue';
 import DreamComposer from '@/components/modals/DreamComposer.vue';
@@ -17,8 +22,15 @@ import EpitaphModal from '@/components/modals/EpitaphModal.vue';
 import ZhashiModal from '@/components/modals/ZhashiModal.vue';
 import ResurrectModal from '@/components/modals/ResurrectModal.vue';
 import ResurrectCodeModal from '@/components/modals/ResurrectCodeModal.vue';
+import JoinRequestModal from '@/components/modals/JoinRequestModal.vue';
+import JoinRespondModal from '@/components/modals/JoinRespondModal.vue';
+import MoveTombModal from '@/components/modals/MoveTombModal.vue';
+import LeaveGroupModal from '@/components/modals/LeaveGroupModal.vue';
+import GroupSettingsModal from '@/components/modals/GroupSettingsModal.vue';
+import GroupMoveModal from '@/components/modals/GroupMoveModal.vue';
 import BurnOverlay from '@/components/effects/BurnOverlay.vue';
 import DreamOverlay from '@/components/effects/DreamOverlay.vue';
+import UnionOverlay from '@/components/effects/UnionOverlay.vue';
 import JossCanvas from '@/components/effects/JossCanvas.vue';
 import { usePolling } from '@/composables/usePolling';
 import { useSound } from '@/composables/useSound';
@@ -38,9 +50,14 @@ const ui = useUiStore();
 
 const sound = useSound(() => ui.sound);
 
-const view = computed(() => {
+const page = computed(() => {
   if (session.tomb && ui.pref === 'coffin') return 'coffin';
-  return 'cemetery';
+  const name = String(route.name || '');
+  if (name === 'mine') return 'mine';
+  if (name === 'zones' || name === 'home') return session.tomb ? 'mine' : 'zones';
+  if (name === 'zone' || name === 'tomb' || name === 'group') return 'zone';
+  if (name === 'search') return 'search';
+  return 'zones';
 });
 
 const polling = usePolling({
@@ -69,20 +86,31 @@ function wireSoundEvents() {
 
 async function syncRoute() {
   if (route.name === 'funeral') {
-    if (session.ready) {
-      ui.funeralOpen = true;
-    }
+    if (session.ready) ui.funeralOpen = true;
+    return;
+  }
+  if (route.name === 'home' && session.ready && session.tomb) {
+    await router.replace('/mine');
     return;
   }
   if (route.name === 'tomb') {
     const code = String(route.params.code || '');
-    if (code && cemetery.openCode !== code) {
+    if (code) {
       ui.pref = 'cemetery';
       await cemetery.openTomb(code);
     }
     return;
   }
+  if (route.name === 'group') {
+    const code = String(route.params.code || '');
+    if (code) {
+      ui.pref = 'cemetery';
+      await cemetery.openGroup(code);
+    }
+    return;
+  }
   if (cemetery.openCode) cemetery.closeDrawer();
+  if (cemetery.openGroupCode && route.name !== 'zone') cemetery.closeGroupDrawer();
 }
 
 watch(
@@ -115,7 +143,7 @@ onMounted(async () => {
   clock.start();
   unwire = wireSoundEvents();
   await session.bootstrap();
-  await cemetery.fetchTombs();
+  await cemetery.fetchZones();
   polling.start();
   void syncRoute();
 });
@@ -131,10 +159,25 @@ onUnmounted(() => {
 <template>
   <TopBar />
   <main>
-    <CemeteryView v-show="view === 'cemetery'" />
-    <CoffinView v-if="view === 'coffin'" />
+    <template v-if="page === 'coffin'">
+      <CoffinView />
+    </template>
+    <template v-else-if="page === 'mine'">
+      <MyCemetery />
+    </template>
+    <template v-else-if="page === 'search'">
+      <SearchView />
+    </template>
+    <template v-else-if="page === 'zone'">
+      <ZoneView />
+    </template>
+    <template v-else>
+      <Hero v-if="!session.tomb" />
+      <ZoneDirectory />
+    </template>
   </main>
   <TombDrawer />
+  <GroupDrawer />
   <ToastStack />
   <JossCanvas />
 
@@ -150,6 +193,12 @@ onUnmounted(() => {
   <ZhashiModal v-if="ui.modal === 'zhashi'" />
   <ResurrectModal v-if="ui.modal === 'resurrect'" />
   <ResurrectCodeModal v-if="ui.modal === 'resurrectCode'" />
+  <JoinRequestModal v-if="ui.modal === 'joinRequest'" />
+  <JoinRespondModal v-if="ui.modal === 'joinRespond'" />
+  <MoveTombModal v-if="ui.modal === 'moveTomb'" />
+  <LeaveGroupModal v-if="ui.modal === 'leaveGroup'" />
+  <GroupSettingsModal v-if="ui.modal === 'groupSettings'" />
+  <GroupMoveModal v-if="ui.modal === 'groupMove'" />
 
   <BurnOverlay
     v-if="ui.burnOverlay"
@@ -162,4 +211,5 @@ onUnmounted(() => {
     v-bind="ui.dreamOverlay"
     @close="ui.dreamOverlay = null"
   />
+  <UnionOverlay v-if="ui.unionOverlay" @done="ui.unionOverlay = false" />
 </template>

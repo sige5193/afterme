@@ -130,7 +130,7 @@ onUnmounted(() => {
       </div>
       <div class="cv-stats">
         敲过 <span>{{ (session.tomb.knock_count || 0) + knockPending }}</span> 次棺材板 · 诈尸
-        {{ session.tomb.zhashi_count || 0 }} 次 · 墓址 {{ address(session.tomb.plot) }}
+        {{ session.tomb.zhashi_count || 0 }} 次 · 墓址 {{ session.tomb.address || address(session.tomb.cell ?? 0) }}
       </div>
     </div>
     <aside class="cv-side">

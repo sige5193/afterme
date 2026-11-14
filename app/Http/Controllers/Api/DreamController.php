@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Dream;
 use App\Models\Offering;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,7 +13,7 @@ class DreamController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $now = now();
 
@@ -20,33 +21,51 @@ class DreamController extends Controller
             ->with([
                 'items',
                 'tomb:id,code,name,is_npc',
-                'dream' => fn ($q) => $q->where('visible_at', '<=', $now),
+                'group:id,code,name',
+                'dreams' => fn ($q) => $q->with('tomb:id,code,name')->where('visible_at', '<=', $now),
             ])
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get()
-            ->map(function (Offering $offering) use ($user) {
-                $includeMessage = true;
-                $data = $offering->toApiArray($includeMessage);
+            ->map(function (Offering $offering) {
+                $data = $offering->toApiArray(true);
                 $data['tomb'] = $offering->tomb ? [
                     'id' => $offering->tomb->id,
                     'code' => $offering->tomb->code,
                     'name' => $offering->tomb->name,
                     'is_npc' => (bool) $offering->tomb->is_npc,
                 ] : null;
-                $data['dream'] = $offering->dream ? $offering->dream->toApiArray() : null;
+                $data['group'] = $offering->group ? [
+                    'code' => $offering->group->code,
+                    'name' => $offering->group->name,
+                ] : null;
+                $data['dreams'] = $offering->dreams->map(fn (Dream $d) => $d->toApiArray())->values()->all();
+                $data['dream'] = $offering->dreams->first()?->toApiArray();
 
                 return $data;
             })
             ->values();
 
-        return response()->json(['offerings' => $offerings]);
+        $specialDreams = Dream::query()
+            ->with(['tomb:id,code,name', 'joinRequest.fromTomb'])
+            ->where('to_user_id', $user->id)
+            ->whereIn('kind', ['join_result', 'system'])
+            ->where('visible_at', '<=', $now)
+            ->orderByDesc('visible_at')
+            ->get()
+            ->map(fn (Dream $d) => $d->toApiArray())
+            ->values();
+
+        return response()->json([
+            'offerings' => $offerings,
+            'special_dreams' => $specialDreams,
+        ]);
     }
 
     public function read(Request $request, int $id): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         $dream = Dream::query()

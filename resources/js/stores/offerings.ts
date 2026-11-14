@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import * as api from '@/api/client';
-import type { InboxItem, MyDreamItem } from '@/api/types';
+import type { Dream, InboxItem, MyDreamItem } from '@/api/types';
 import { ITEM } from '@/config/items';
 import { useUiStore } from './ui';
 
@@ -31,6 +31,7 @@ export function itemTotals(
 export const useOfferingsStore = defineStore('offerings', () => {
   const inbox = ref<InboxItem[]>([]);
   const dreams = ref<MyDreamItem[]>([]);
+  const specialDreams = ref<Dream[]>([]);
   const loadingInbox = ref(false);
   const loadingDreams = ref(false);
 
@@ -48,7 +49,9 @@ export const useOfferingsStore = defineStore('offerings', () => {
   async function fetchDreams() {
     loadingDreams.value = true;
     try {
-      dreams.value = await api.myDreams();
+      const res = await api.myDreams();
+      dreams.value = res.items;
+      specialDreams.value = res.special;
     } catch {
       useUiStore().toast(api.DEFAULT_ERROR, { err: true });
     } finally {
@@ -59,6 +62,7 @@ export const useOfferingsStore = defineStore('offerings', () => {
   return {
     inbox,
     dreams,
+    specialDreams,
     loadingInbox,
     loadingDreams,
     fetchInbox,

@@ -22,7 +22,7 @@ async function submit() {
   try {
     await session.resurrectWithCode(code.value);
     pulse.reset();
-    await cemetery.fetchTombs();
+    await cemetery.fetchZones();
     ui.closeModal();
   } catch (e) {
     err.value =
