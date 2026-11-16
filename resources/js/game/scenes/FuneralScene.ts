@@ -94,8 +94,13 @@ export default class FuneralScene extends Phaser.Scene {
     this.step = 0;
     this.err = '';
     this.grid = null;
+    this.gridLoading = false;
     this.zones = [];
     this.keepScroll = 0;
+    // 上一次办葬礼留下的对象已经随场景销毁
+    this.root = [];
+    this.scroll = null;
+    this.ceremony = null;
     this.F = {
       name: prev?.name || '',
       birthYear: prev?.birth_year ? String(prev.birth_year) : '',
@@ -123,7 +128,9 @@ export default class FuneralScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.ceremony?.destroy();
       this.ceremony = null;
-      this.clear();
+      // 这时场景里的对象已经被 Phaser 销毁了：只清引用，别再去读滚动位置
+      this.root = [];
+      this.scroll = null;
       sfx('stop');
     });
     this.render();
@@ -173,7 +180,7 @@ export default class FuneralScene extends Phaser.Scene {
   }
 
   private clear(): void {
-    if (this.scroll) this.keepScroll = this.scroll.t;
+    if (this.scroll && live(this)) this.keepScroll = this.scroll.t;
     for (const o of this.root) o.destroy();
     this.root = [];
     this.scroll = null;

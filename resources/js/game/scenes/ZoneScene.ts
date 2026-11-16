@@ -52,6 +52,8 @@ export default class ZoneScene extends MapScene {
     this.grid = null;
     this.stand = null;
     this.showHelp = true;
+    this.overlay = [];
+    this.zsText = null;
     state.viewingPhaseId = this.phaseId;
     state.ghostCell = null;
     super.create(data as unknown as Record<string, unknown>);

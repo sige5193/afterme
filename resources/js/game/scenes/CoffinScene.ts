@@ -115,6 +115,14 @@ export default class CoffinScene extends Phaser.Scene {
   }
 
   create(): void {
+    // 场景实例会被重复使用：上一次留下的对象已经随场景销毁，引用要清掉，不然 render 一读就报错
+    this.gfx = null;
+    this.sleeper = null;
+    this.zzz = null;
+    this.status = null;
+    this.stats = null;
+    this.listPanel = null;
+    this.knockTimer = null;
     this.ui = [];
     this.motes = [];
     this.revealed = new Set();
@@ -342,7 +350,7 @@ export default class CoffinScene extends Phaser.Scene {
 
   private render(): void {
     if (!live(this)) return;
-    if (this.listPanel) this.listScroll = this.listPanel.t;
+    if (this.listPanel && live(this)) this.listScroll = this.listPanel.t;
     for (const u of this.ui) u.destroy();
     this.ui = [];
     this.gfx?.destroy();

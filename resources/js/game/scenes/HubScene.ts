@@ -39,6 +39,7 @@ export default class HubScene extends MapScene {
   create(data: { fromZone?: string | null }): void {
     this.fromZone = data.fromZone ?? null;
     this.statLabels.clear();
+    this.overlay = [];
     state.viewingPhaseId = null;
     super.create(data as Record<string, unknown>);
     this.subs.on('zones', () => this.refreshStats()).on('presence', () => this.refreshStats()).on('session', () => this.refreshOverlay());
