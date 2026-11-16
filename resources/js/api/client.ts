@@ -19,7 +19,6 @@ import type {
   SaveTombRequest,
   SaveTombResponse,
   TombDetail,
-  TombListItem,
   MyCemeteryResponse,
   SearchResponse,
   ZoneInfo,
@@ -161,13 +160,8 @@ export function me(timezone?: string) {
   return get<MeResponse>('/me', { query: { timezone } });
 }
 
-export function resurrect(data: ResurrectRequest) {
+export function resurrect(data: ResurrectRequest & { timezone?: string }) {
   return post<ResurrectResponse>('/resurrect', data, { auth: false });
-}
-
-/** @deprecated removed in ADJUST-01; kept as empty stub for old callers */
-export async function listTombs(): Promise<TombListItem[]> {
-  return [];
 }
 
 export async function getTomb(code: string) {

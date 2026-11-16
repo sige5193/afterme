@@ -1,23 +1,108 @@
-/* Tailwind entry — handmade art lives in resources/js/styles/app.css */
-@import 'tailwindcss';
-@import '../js/styles/app.css';
+/* 整个界面都画在 Phaser 画布上；这里只管画布外壳、加载画面和叠在画布上的输入框。 */
+/* 界面不用工具类，只要 Tailwind 的基础重置 */
+@import 'tailwindcss' source(none);
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../js/**/*.{vue,js,ts}';
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: #07080c;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
 
-@theme {
-    --color-ink: var(--ink);
-    --color-ink-2: var(--ink-2);
-    --color-stone: var(--stone);
-    --color-bone: var(--bone);
-    --color-bone-dim: var(--bone-dim);
-    --color-joss: var(--joss);
-    --color-seal: var(--seal);
-    --color-wisp: var(--wisp);
-    --color-line: var(--line);
-    --font-brush: var(--font-brush);
-    --font-body: var(--font-body);
-    --font-cyber: var(--font-cyber);
-    --font-sans: var(--font-body);
+#app {
+    position: fixed;
+    inset: 0;
+}
+
+#app canvas {
+    display: block;
+    image-rendering: pixelated;
+    touch-action: none;
+}
+
+#loader {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: #07080c;
+    transition: opacity 0.5s steps(5);
+}
+
+#loader.gone {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#loader canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+#dom-layer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    z-index: 10;
+}
+
+/* 叠在画布上的网页输入框：背景透明，露出下面画布里的像素边框 */
+.px-input {
+    position: absolute;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #ece6d6;
+    caret-color: #e8c46a;
+    font-family: 'AftermePixel', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-weight: 400;
+    resize: none;
+    overflow: hidden;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: unset;
+    font-smooth: never;
+    -webkit-user-select: text;
+    user-select: text;
+    appearance: none;
+    border-radius: 0;
+}
+
+textarea.px-input {
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+textarea.px-input::-webkit-scrollbar {
+    display: none;
+}
+
+.px-input::placeholder {
+    color: #6f6a5c;
+    opacity: 1;
+}
+
+.px-input.paper {
+    color: #2b2016;
+    caret-color: #a3302a;
+}
+
+.px-input.paper::placeholder {
+    color: #9c8d70;
+}
+
+.px-input.readonly {
+    cursor: text;
 }

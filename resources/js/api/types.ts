@@ -190,11 +190,6 @@ export interface SearchResponse {
   redirect?: string;
 }
 
-export interface SearchResponse {
-  results: CemeteryCard[];
-  redirect?: string;
-}
-
 export interface OfferingItem {
   item_key: string;
   qty: number;
@@ -254,9 +249,17 @@ export interface JoinRequest {
   created_at: string;
 }
 
-export type InboxItem =
-  | (Offering & { type?: 'offering' | 'group_offering' })
-  | (JoinRequest & { type: 'join_request'; from_name?: string; items?: never; user_id?: number; dream?: never; has_dream?: never });
+/** 香火簿里的结伴帖：后端把 type 覆盖成了 join_request，邀请还是申请要看 to_tomb */
+export type InboxJoinRequest = Omit<JoinRequest, 'type'> & {
+  type: 'join_request';
+  from_name?: string;
+  items?: never;
+  user_id?: number;
+  dream?: never;
+  has_dream?: never;
+};
+
+export type InboxItem = (Offering & { type?: 'offering' | 'group_offering' }) | InboxJoinRequest;
 
 export interface PulseGhost {
   tomb_code: string;
