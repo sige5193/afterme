@@ -8,6 +8,7 @@
 
 import Phaser from 'phaser';
 import { emit } from '@/core/bus';
+import { pixelRatio } from '@/core/pixelRatio';
 import { domLayer } from './ui/dom';
 import BootScene from './scenes/BootScene';
 import CoffinScene from './scenes/CoffinScene';
@@ -21,7 +22,7 @@ import ZoneScene from './scenes/ZoneScene';
 export type Viewport = { w: number; h: number; zoom: number; k: number };
 
 export function viewport(): Viewport {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = pixelRatio();
   const cssW = Math.max(200, window.innerWidth);
   const cssH = Math.max(200, window.innerHeight);
   const short = Math.min(cssW, cssH);

@@ -5,6 +5,7 @@
  */
 
 import fontUrl from '../fonts/afterme-pixel.woff2?url';
+import { pixelRatio } from './core/pixelRatio';
 
 const GLYPHS = [
   [0xffe, 0x040, 0x040, 0x040, 0x240, 0x27c, 0x240, 0x240, 0x240, 0x240, 0xffe],
@@ -77,11 +78,15 @@ let finished = false;
 
 function resize(): void {
   if (!canvas) return;
-  const k = Math.max(2, Math.round(Math.min(innerWidth, innerHeight) / 150));
-  W = Math.ceil(innerWidth / k);
-  H = Math.ceil(innerHeight / k);
+  // 按屏幕像素取整数倍，避免一粗一细；CSS 尺寸按实际倍数反推
+  const dpr = pixelRatio();
+  const k = Math.max(1, Math.round(dpr * Math.max(2, Math.round(Math.min(innerWidth, innerHeight) / 150))));
+  W = Math.ceil((innerWidth * dpr) / k);
+  H = Math.ceil((innerHeight * dpr) / k);
   canvas.width = W;
   canvas.height = H;
+  canvas.style.width = `${(W * k) / dpr}px`;
+  canvas.style.height = `${(H * k) / dpr}px`;
 }
 
 function px(x: number, y: number, w: number, h: number, c: string): void {

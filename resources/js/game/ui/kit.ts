@@ -18,6 +18,7 @@ import type { ButtonKind, ButtonState } from '../pixel/frames';
 import { FRAME_CORNERS } from '../pixel/textures';
 import { DomInput, type Rect } from './dom';
 import { wrapMarkup, wrappedIndex, wrapPlain } from './linebreak';
+import { installPixelText, TEXT_METRICS } from './pixelFont';
 import { BTN_H, BTN_H_SM, COL, FONT, FONT_SIZE, HEX, INPUT_H, LINE_HEIGHT, LINE_SPACING } from './theme';
 
 export { BBCodeText, FixWidthSizer, GridSizer, Label, NinePatch, OverlapSizer, ScrollablePanel, Sizer };
@@ -51,6 +52,8 @@ export type TxtOpts = {
   pad?: number;
 };
 
+let pixelTextOn = false;
+
 export function txt(scene: Phaser.Scene, str: string, o: TxtOpts = {}): BBCodeText {
   const scale = o.scale ?? 1;
   const style: Record<string, unknown> = {
@@ -59,7 +62,8 @@ export function txt(scene: Phaser.Scene, str: string, o: TxtOpts = {}): BBCodeTe
     color: o.color ?? COL.bone,
     lineSpacing: o.lineSpacing ?? LINE_SPACING,
     halign: o.align ?? 'left',
-    testString: '|MÉqgy墓鬼',
+    // 写死字高，不让各浏览器去量（Safari 量出来带小数）
+    metrics: TEXT_METRICS,
   };
   const wrapW = o.wrap ? Math.floor(o.wrap / scale) : 0;
   // 换行自己先插好（标点不落行首），rex 的 mix 断行只当兜底
@@ -70,6 +74,11 @@ export function txt(scene: Phaser.Scene, str: string, o: TxtOpts = {}): BBCodeTe
   if (o.pad != null) style.padding = { left: o.pad, right: o.pad, top: o.pad, bottom: o.pad };
   const content = o.markup ? str : raw(str);
   const t = new BBCodeText(scene, 0, 0, wrapW ? wrapMarkup(content, wrapW) : content, style as never);
+  if (!pixelTextOn && installPixelText(t)) {
+    pixelTextOn = true;
+    // 第一段字是换画法之前画的，重画一遍
+    t.updateText();
+  }
   scene.add.existing(t);
   if (wrapW) t.setData('wrapW', wrapW);
   if (scale !== 1) t.setScale(scale);
