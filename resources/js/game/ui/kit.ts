@@ -263,8 +263,10 @@ export function iconButton(scene: Phaser.Scene, icon: string, onClick: () => voi
 }
 
 export function badge(scene: Phaser.Scene, n: number): Label {
+  // 红底要先建，不然会盖住数字
+  const back = bg(scene, 'badge', 10, 10);
   const t = txt(scene, n > 99 ? '99+' : String(n), { color: COL.bone });
-  const l = new Label(scene, { background: bg(scene, 'badge', 10, 10), text: t, space: { left: 3, right: 3, top: 0, bottom: 1 }, align: 'center', height: 14 });
+  const l = new Label(scene, { background: back, text: t, space: { left: 3, right: 3, top: 0, bottom: 1 }, align: 'center', height: 14 });
   scene.add.existing(l);
   return l;
 }
