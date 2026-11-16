@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\Zone;
 use App\Models\ZonePhase;
 use App\Support\DayNight;
+use App\Support\Embers;
 use App\Support\TombAddress;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -262,6 +263,7 @@ class PulseController extends Controller
             'ghosts' => $ghosts,
             'zone_ghosts' => $zoneGhosts,
             'living_count' => $livingCount,
+            'embers' => $zonePhaseId ? Embers::forPhase((int) $zonePhaseId, $now) : [],
         ]);
     }
 }

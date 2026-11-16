@@ -9,6 +9,7 @@ import type {
   InboxItem,
   MyDreamItem,
   PhaseGrid,
+  PulseEmber,
   PulseGhost,
   Tomb,
   User,
@@ -53,6 +54,10 @@ export const state = {
   zoneGhosts: {} as Record<string, number>,
   ghosts: [] as PulseGhost[],
   livingCount: 0,
+  /** 哪一期、哪些墓位刚烧过纸 */
+  embers: { phaseId: null as number | null, list: [] as PulseEmber[] },
+  /** 服务器时间 - 本地时间（毫秒），算火星烧了多久用 */
+  serverSkew: 0,
 
   /* 香火簿 / 我的梦 */
   inbox: [] as InboxItem[],

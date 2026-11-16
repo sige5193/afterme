@@ -281,6 +281,12 @@ export interface PulseRequest {
   viewing_tomb_id: number | null;
 }
 
+/** 最近一小时烧过纸的墓位（坟前留着火星） */
+export interface PulseEmber {
+  cell: number;
+  burned_at: string;
+}
+
 export interface PulseResponse {
   now: string;
   is_night: boolean;
@@ -296,6 +302,8 @@ export interface PulseResponse {
   ghosts: PulseGhost[];
   zone_ghosts: Record<string, number>;
   living_count: number;
+  /** 正在看的那一期里的火星 */
+  embers?: PulseEmber[];
 }
 
 export interface EnterRequest {

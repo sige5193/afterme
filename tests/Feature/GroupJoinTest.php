@@ -156,6 +156,22 @@ class GroupJoinTest extends TestCase
     /**
      * @return array{0: User, 1: Tomb}
      */
+    public function test_burning_for_a_group_leaves_embers_on_its_block(): void
+    {
+        $this->seedZonesAndNpcs();
+        [$a, $ta] = $this->buryUser(2);
+        [$b, $tb] = $this->buryUser(3);
+        $code = $this->makePair($a, $ta, $b, $tb, '烧纸搭子');
+        $group = Group::query()->where('code', $code)->firstOrFail();
+
+        Sanctum::actingAs(User::factory()->create(['timezone' => 'Asia/Shanghai']));
+        $this->postJson('/api/groups/'.$code.'/offerings', ['items' => ['juhua' => 1]])->assertOk();
+
+        $this->postJson('/api/pulse', ['mode' => 'living', 'zone_phase_id' => $group->zone_phase_id])
+            ->assertOk()
+            ->assertJsonPath('embers.0.cell', $group->start_cell);
+    }
+
     private function buryUser(int $cell): array
     {
         $user = User::factory()->create(['timezone' => 'Asia/Shanghai']);

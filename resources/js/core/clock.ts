@@ -3,6 +3,7 @@
  */
 
 import { emit } from './bus';
+import { state } from './state';
 import { hhmm, isNightAt, shichen, untilNight } from '@/utils/time';
 
 let now = new Date();
@@ -11,6 +12,11 @@ let timer: ReturnType<typeof setInterval> | null = null;
 
 export function clockNow(): Date {
   return now;
+}
+
+/** 按服务器时间算的「现在」（毫秒） */
+export function serverNow(): number {
+  return Date.now() + state.serverSkew;
 }
 
 /** 画面上的昼夜跟着本地时钟走；能不能出棺以服务器为准（见 session.ghostOut） */

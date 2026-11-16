@@ -1,5 +1,6 @@
 /**
- * 像素图标：13 件纸扎（16×16）、6 张遗像（16×16，黑白）、顶栏和按钮上的小图标（12×12）。
+ * 像素图标：13 件纸扎（16×16）、6 张遗像（16×16，黑白）、顶栏和按钮上的小图标（12×12），
+ * 还有棺材里钱雨用的冥币和黄纸。
  */
 
 import { C, type Canvas, ctx2d, fromArt, grayscale, makeCanvas } from './art';
@@ -594,6 +595,18 @@ export const HUD_ICONS: Record<string, string[]> = {
   ],
   check: ['........', '......kk', '.....kyk', 'kk..kyk.', 'kyk.kyk.', '.kykyk..', '..kyk...', '...k....'],
 };
+
+/** 棺材里的钱雨：冥币翻飞的三帧（平、斜、侧）和一张黄纸 */
+export const RAIN_ART: Record<string, string[]> = {
+  'bill-0': ['kkkkkkkkk', 'kgyyggrrk', 'kgyyggrrk', 'kGGGGGGGk', 'kkkkkkkkk'],
+  'bill-1': ['.........', 'kkkkkkkkk', 'kgyyggrrk', 'kkkkkkkkk', '.........'],
+  'bill-2': ['.........', '.........', 'kGGGGGGGk', '.........', '.........'],
+  paper: ['kkkkkk', 'kssssk', 'ksrrsk', 'ksrrsk', 'kssssk', 'kkkkkk'],
+};
+
+export function rainSprite(key: string): Canvas {
+  return fromArt(RAIN_ART[key] ?? RAIN_ART.paper, P);
+}
 
 export function itemIcon(key: string): Canvas {
   return fromArt(ITEM_ICONS[key] ?? ITEM_ICONS.mingbi, P);

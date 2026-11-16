@@ -1,6 +1,6 @@
 /**
  * WebAudio 合成音效（原样平移原型的 Sound）：敲棺材板 / 锣 / 木鱼 / 铃 / 化纸 / 呼啸 / 哀乐，
- * 另加一个很轻的 8-bit 按键音。
+ * 另加一个很轻的 8-bit 按键音和钱雨的叮当声。
  */
 
 import type { SoundName } from './ui';
@@ -195,6 +195,16 @@ function dirge() {
   step();
 }
 
+/** 钱雨：一串清脆的叮当 */
+function coins(n: number): void {
+  const c = ac();
+  if (!c) return;
+  for (let i = 0; i < n; i++) {
+    const t = c.currentTime + i * 0.07 + Math.random() * 0.04;
+    tone(1900 + Math.random() * 900, t, 0.09, { type: 'triangle', gain: 0.05 });
+  }
+}
+
 export function playSound(name: SoundName, arg?: number): void {
   switch (name) {
     case 'knock':
@@ -213,6 +223,8 @@ export function playSound(name: SoundName, arg?: number): void {
       return crackle(arg ?? 3);
     case 'click':
       return click();
+    case 'coins':
+      return coins(arg ?? 8);
     case 'stop':
       return stopDirge();
   }

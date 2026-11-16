@@ -16,6 +16,7 @@ import { SPECIAL } from '@/config/specialPlots';
 import { address, mmss } from '@/utils/time';
 import { setFuneralPrefill } from '../director';
 import { ensureGroupStone } from '../pixel/textures';
+import type { EmberSpot } from '../world/embers';
 import { renderGround, type GroundDecal } from '../world/ground';
 import { buildWorld, TILE, type WorldCell, type WorldInput } from '../world/world';
 import { button, chip, clip, flow, hbox, txt, type Sizer, vbox } from '../ui/kit';
@@ -31,6 +32,8 @@ export default class ZoneScene extends MapScene {
   private grid: PhaseGrid | null = null;
   private focusOnLoad: number | null = null;
   private stand: ((cell: number) => { x: number; y: number } | null) | null = null;
+  /** 每个墓位烧纸的地方（碑前），火星画在这里 */
+  private burnSpots = new Map<number, { x: number; y: number; w: number }>();
   private overlay: Sizer[] = [];
   private overlayH = 0;
   private zsTimer: Phaser.Time.TimerEvent | null = null;
@@ -57,6 +60,7 @@ export default class ZoneScene extends MapScene {
         const g = state.grids.get(id);
         if (g && g !== this.grid) this.rebuild(g);
       })
+      .on('embers', () => this.applyEmbers())
       .on('presence', () => {
         this.syncPeerTargets();
         this.refreshOverlay();
@@ -86,6 +90,24 @@ export default class ZoneScene extends MapScene {
   private rebuild(grid: PhaseGrid): void {
     const m = this.mapFromGrid(grid);
     this.setMap(m);
+  }
+
+  protected afterBuild(): void {
+    this.applyEmbers();
+  }
+
+  /** 把 pulse 报来的「最近烧过纸的格子」换成坟前的火星 */
+  private applyEmbers(): void {
+    if (!live(this) || !this.map) return;
+    const spots: EmberSpot[] = [];
+    if (state.embers.phaseId === this.phaseId) {
+      for (const e of state.embers.list) {
+        const at = this.burnSpots.get(e.cell);
+        const since = Date.parse(e.burned_at);
+        if (at && Number.isFinite(since)) spots.push({ key: String(e.cell), ...at, since });
+      }
+    }
+    this.setEmbers(spots);
   }
 
   private zoneKey(): string {
@@ -139,7 +161,11 @@ export default class ZoneScene extends MapScene {
     const props: MapProp[] = [];
     const lights: MapLight[] = [];
     const zoneName = grid.zone.name;
+    this.burnSpots.clear();
     for (const sp of w.sprites) {
+      // 烧纸的地方：碑前小路上
+      if (sp.kind === 'stone' && sp.cell != null) this.burnSpots.set(sp.cell, { x: sp.x, y: sp.y + 8, w: 30 });
+      if (sp.kind === 'group' && sp.cell != null) this.burnSpots.set(sp.cell, { x: sp.x, y: sp.y + 8, w: Math.min((sp.pw ?? 40) - 4, 64) });
       switch (sp.kind) {
         case 'stone': {
           decals.push({ kind: 'mound', x: sp.x, y: sp.y, w: 26 });

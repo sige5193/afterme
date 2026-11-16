@@ -99,12 +99,13 @@ export async function sendPulse(): Promise<void> {
   if (!state.ready || !api.getToken()) return;
 
   const mode = presenceMode();
+  const askedPhaseId = state.viewingPhaseId;
   let res: PulseResponse;
   try {
     res = await api.pulse({
       since,
       mode,
-      zone_phase_id: state.viewingPhaseId,
+      zone_phase_id: askedPhaseId,
       cell: mode === 'ghost' ? state.ghostCell : null,
       viewing_tomb_id: state.viewingTombId,
     });
@@ -113,6 +114,10 @@ export async function sendPulse(): Promise<void> {
   }
 
   since = res.now;
+  const serverMs = Date.parse(res.now);
+  if (Number.isFinite(serverMs)) state.serverSkew = serverMs - Date.now();
+  state.embers = { phaseId: askedPhaseId, list: res.embers ?? [] };
+  emit('embers');
   const sessionChanged = state.isNightServer !== res.is_night || state.ghostOutServer !== res.ghost_out;
   state.isNightServer = res.is_night;
   state.ghostOutServer = res.ghost_out;
@@ -138,6 +143,7 @@ export async function sendPulse(): Promise<void> {
     if (knownOfferings.has(o.id)) continue;
     knownOfferings.add(o.id);
     if (!primed) continue;
+    emit('offering', o);
     const prefix = state.pref === 'coffin' ? '头顶传来烧纸声……' : '';
     toast(`${prefix}${o.from_name || '有人'}给你烧了 ${itemsText(o.items)}`, {
       btn: '看看',
@@ -210,7 +216,9 @@ export async function sendPulse(): Promise<void> {
 }
 
 function intervalMs(): number {
-  return activePolling() ? 5_000 : 25_000;
+  if (activePolling()) return 5_000;
+  // 躺在棺材里也要及时知道上面有人烧纸（棺材里会下钱雨）
+  return presenceMode() === 'coffin' ? 10_000 : 25_000;
 }
 
 function clearTimer(): void {

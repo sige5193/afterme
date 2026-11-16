@@ -6,7 +6,7 @@ import * as api from '@/api/client';
 import type { DreamStyleKey, GroupDetail } from '@/api/types';
 import { emit } from '@/core/bus';
 import { fetchInbox, itemsRecord, itemsText, offeringOf } from '@/core/offerings';
-import { resetPulse } from '@/core/pulse';
+import { pulseNow, resetPulse } from '@/core/pulse';
 import { fetchZones, invalidateGrids } from '@/core/cemetery';
 import { patchTomb, resurrectWithCode, setPref, setTomb } from '@/core/session';
 import { state } from '@/core/state';
@@ -205,6 +205,8 @@ export class BurnPanel extends Panel {
       else await api.createOffering(code, { items, message: msg, from_name: fromName });
       result = 'ok';
       emit('changed', this.isGroup ? String(this.payload.groupCode) : code);
+      // 马上问一次 pulse：坟前的火星在化纸动画后面就点上了
+      pulseNow();
       if (own) void fetchInbox();
     } catch (e) {
       result = e instanceof Error && e.message ? e.message : api.DEFAULT_ERROR;

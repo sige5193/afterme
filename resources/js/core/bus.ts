@@ -3,6 +3,7 @@
  * 状态改了就 emit，一个场景或面板关心什么就 on 什么，销毁时调用返回的函数取消订阅。
  */
 
+import type { Offering } from '@/api/types';
 import type { Route } from './router';
 import type { PanelRequest, ToastOptions, FxRequest } from './ui';
 
@@ -22,6 +23,10 @@ export interface BusEvents {
   grid: number;
   route: Route;
   inbox: void;
+  /** 有人给我（或我所在的合葬墓）烧了纸 */
+  offering: Offering;
+  /** 正在看的那一期的火星更新了 */
+  embers: void;
   dreams: void;
   /** 正在看的那座坟里有人敲棺材板 */
   knock: void;

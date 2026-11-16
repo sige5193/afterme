@@ -131,7 +131,8 @@ export default class FxScene extends Phaser.Scene {
         this.coins.splice(i, 1);
       }
     }
-    if (this.active === 'burn') this.updateFire(dt);
+    // 收尾淡出的那 300ms 里不再冒新火苗，不然会留下一排定住的火星
+    if (this.active === 'burn' && this.finish) this.updateFire(dt);
   }
 
   /* ---------------- 化纸 ---------------- */

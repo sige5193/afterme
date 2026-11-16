@@ -7,7 +7,7 @@ import { ITEMS } from '@/config/items';
 import { ZONE_ORDER } from '@/config/zones';
 import { type Canvas, glowBrush, lightBrush, makeCanvas, ctx2d } from './art';
 import { buildFrames } from './frames';
-import { faceIcon, HUD_ICONS, hudIcon, itemIcon, portraitFrame } from './icons';
+import { faceIcon, HUD_ICONS, hudIcon, itemIcon, portraitFrame, RAIN_ART, rainSprite } from './icons';
 import {
   bench,
   bigStone,
@@ -91,6 +91,7 @@ export function registerTextures(scene: Phaser.Scene): void {
   for (const key of ZONE_ORDER) add(t, `gate-${key}`, gate(GATE_THEMES[key]));
 
   for (const it of ITEMS) add(t, `item-${it.k}`, itemIcon(it.k));
+  for (const name of Object.keys(RAIN_ART)) add(t, `rain-${name}`, rainSprite(name));
   for (let i = 0; i < 6; i++) {
     add(t, `face-${i}`, faceIcon(i));
     add(t, `facec-${i}`, faceIcon(i, true));

@@ -88,7 +88,7 @@ export function sfx(name: SoundName, arg?: number): void {
   soundHandler?.(name, arg);
 }
 
-export type SoundName = 'knock' | 'gong' | 'muyu' | 'bell' | 'whoosh' | 'dirge' | 'stop' | 'crackle' | 'click';
+export type SoundName = 'knock' | 'gong' | 'muyu' | 'bell' | 'whoosh' | 'dirge' | 'stop' | 'crackle' | 'click' | 'coins';
 
 let soundHandler: ((name: SoundName, arg?: number) => void) | null = null;
 

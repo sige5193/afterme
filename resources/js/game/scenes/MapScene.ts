@@ -9,8 +9,9 @@
 
 import Phaser from 'phaser';
 import { Subscriptions } from '@/core/bus';
-import { isNight } from '@/core/clock';
+import { isNight, serverNow } from '@/core/clock';
 import { avatarKind } from '@/core/session';
+import { Embers, type EmberSpot } from '../world/embers';
 import { findPath, nearestOpen, type TilePoint } from '../world/pathfind';
 import { TILE } from '../world/world';
 import type { Facing } from '../pixel/sprites';
@@ -113,6 +114,8 @@ export default abstract class MapScene extends Phaser.Scene {
   private glows: Array<{ img: Phaser.GameObjects.Image; light: MapLight }> = [];
   private playerGlow: Phaser.GameObjects.Image | null = null;
   private dayTint: Phaser.GameObjects.Rectangle | null = null;
+  /** 坟前烧纸留下的火星 */
+  private embers: Embers | null = null;
   private camX = 0;
   private camY = 0;
   private night = false;
@@ -149,6 +152,7 @@ export default abstract class MapScene extends Phaser.Scene {
     this.dark = null;
     this.playerLight = null;
     this.lightHolder = this.make.container({ x: 0, y: 0 }, false);
+    this.embers = new Embers(this, () => this.lightHolder);
 
     const cam = this.cameras.main;
     cam.setOrigin(0, 0);
@@ -277,6 +281,11 @@ export default abstract class MapScene extends Phaser.Scene {
     this.snapCamera();
     this.applyNight();
     this.syncPeerTargets();
+  }
+
+  /** 换一批坟前火星（世界坐标） */
+  protected setEmbers(spots: EmberSpot[]): void {
+    this.embers?.set(spots, serverNow());
   }
 
   protected addWorldLabel(text: string, wx: number, wy: number, color: string, plate = true): BBCodeText {
@@ -425,6 +434,7 @@ export default abstract class MapScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const m = this.map;
     if (!m || !this.player) return;
+    this.embers?.update(delta, serverNow(), this.night);
     const dt = Math.max(0, Math.min(0.05, delta / 1000));
     this.t += dt;
     const busy = uiBusy();
@@ -748,6 +758,8 @@ export default abstract class MapScene extends Phaser.Scene {
     this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, this.routeCamera, this);
     this.subs.clear();
     this.destroyOverlay();
+    this.embers?.destroy();
+    this.embers = null;
     this.lightHolder?.destroy();
     this.lightHolder = null;
     this.staticLights = [];
