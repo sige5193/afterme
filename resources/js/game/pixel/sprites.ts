@@ -518,6 +518,9 @@ export const GATE_THEMES: Record<string, GateTheme> = {
 };
 
 /** 牌坊：80×64，匾额上的字由场景用像素字体另外写 */
+/** 牌坊贴图 64 高、底边对齐；牌匾中心离底边这么高（地图上把园区名字的中心放在这里） */
+export const GATE_PLAQUE_DY = 64 - 19;
+
 export function gate(theme: GateTheme = GATE_THEMES.group): Canvas {
   const w = 80;
   const h = 64;
@@ -546,8 +549,9 @@ export function gate(theme: GateTheme = GATE_THEMES.group): Canvas {
   x.fillRect(0, 7, 3, 3);
   x.fillRect(77, 7, 3, 3);
   rect(10, 6, 60, 4, theme.roof);
-  rect(26, 12, 28, 14, theme.plaque);
-  rect(28, 14, 24, 10, '#1e1a14', false);
+  // 牌匾：内框 28×10，中心在 y=19（四个字放大两倍刚好留边）
+  rect(24, 12, 32, 14, theme.plaque);
+  rect(26, 14, 28, 10, '#1e1a14', false);
   if (theme.extra === 'lantern') {
     const l = lantern();
     x.drawImage(l, 16, 29);

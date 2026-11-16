@@ -8,6 +8,7 @@ import { state } from '@/core/state';
 import { openPanel, toast } from '@/core/ui';
 import { ZONE_ORDER, ZONES } from '@/config/zones';
 import { mulberry32 } from '../pixel/art';
+import { GATE_PLAQUE_DY } from '../pixel/sprites';
 import { GROUND_PLAZA, renderGround, type GroundDecal } from '../world/ground';
 import { GROUND_BRIDGE, GROUND_FENCE, GROUND_GRASS, GROUND_PATH, GROUND_WATER, TILE } from '../world/world';
 import { button, hbox, txt, type Sizer, vbox } from '../ui/kit';
@@ -97,7 +98,7 @@ export default class HubScene extends MapScene {
       const px = cx * TILE + TILE / 2;
       const py = GATE_ROW * TILE;
       const zone = ZONES[key];
-      props.push({ key: `gate-${key}`, x: px, y: py, label: { text: zone.name, color: COL.joss, dy: 44, plate: false } });
+      props.push({ key: `gate-${key}`, x: px, y: py, label: { text: zone.name, color: COL.joss, dy: GATE_PLAQUE_DY, plate: false, center: true } });
       lights.push({ x: px, y: py - 30, r: 40, glow: 'warm', glowR: 28 });
       interactables.push({
         id: `gate-${key}`,

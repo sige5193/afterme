@@ -15,6 +15,7 @@ import { openPanel, toast } from '@/core/ui';
 import { SPECIAL } from '@/config/specialPlots';
 import { address, mmss } from '@/utils/time';
 import { setFuneralPrefill } from '../director';
+import { GATE_PLAQUE_DY } from '../pixel/sprites';
 import { ensureGroupStone } from '../pixel/textures';
 import type { EmberSpot } from '../world/embers';
 import { renderGround, type GroundDecal } from '../world/ground';
@@ -206,7 +207,7 @@ export default class ZoneScene extends MapScene {
           lights.push({ x: sp.x, y: sp.y - 18, r: 46, glow: 'warm', glowR: 28 });
           break;
         case 'gate':
-          props.push({ key: `gate-${grid.zone.key}`, x: sp.x, y: sp.y, label: { text: clip(zoneName, 6), color: COL.joss, dy: 44, plate: false } });
+          props.push({ key: `gate-${grid.zone.key}`, x: sp.x, y: sp.y, label: { text: clip(zoneName, 6), color: COL.joss, dy: GATE_PLAQUE_DY, plate: false, center: true } });
           lights.push({ x: sp.x, y: sp.y - 30, r: 40 });
           break;
         case 'bridge':

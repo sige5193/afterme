@@ -27,7 +27,8 @@ export type MapProp = {
   y: number;
   depthY?: number;
   alpha?: number;
-  label?: { text: string; color?: string; dy: number; dx?: number; plate?: boolean };
+  /** dy：标签离底边多高；center 为 true 时这一点是标签的中心（牌匾上的字），否则是标签的底边 */
+  label?: { text: string; color?: string; dy: number; dx?: number; plate?: boolean; center?: boolean };
 };
 
 export type MapLight = { x: number; y: number; r: number; glow?: 'warm' | 'wisp'; glowR?: number; strength?: number };
@@ -225,7 +226,10 @@ export default abstract class MapScene extends Phaser.Scene {
       img.setDepth(p.depthY ?? p.y);
       if (p.alpha != null) img.setAlpha(p.alpha);
       this.worldObjs.push(img);
-      if (p.label) this.addWorldLabel(p.label.text, p.x + (p.label.dx ?? 0), p.y - p.label.dy, p.label.color ?? COL.bone, p.label.plate ?? true);
+      if (p.label) {
+        const l = this.addWorldLabel(p.label.text, p.x + (p.label.dx ?? 0), p.y - p.label.dy, p.label.color ?? COL.bone, p.label.plate ?? true);
+        if (p.label.center) l.setOrigin(0.5, 0.5);
+      }
     }
 
     if (!this.player) {
