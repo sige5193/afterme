@@ -492,7 +492,7 @@ export class ResurrectPanel extends Panel {
     });
     b.add(box, { align: 'left' });
     if (this.err) b.add(txt(scene, this.err, { color: COL.seal, wrap: w }), { align: 'left' });
-    scene.time.delayedCall(80, () => input.focus());
+    scene.time.delayedCall(80, () => input.autofocus());
   }
 
   buildFooter(f: FixWidthSizer): void {

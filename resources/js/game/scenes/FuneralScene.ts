@@ -48,6 +48,7 @@ import { bigStoneView } from '../ui/stones';
 import { COL } from '../ui/theme';
 import { uiState } from '../ui/uiState';
 import { live } from './live';
+import { onResized } from './resized';
 
 type Form = {
   name: string;
@@ -122,10 +123,9 @@ export default class FuneralScene extends Phaser.Scene {
     this.cameras.main.fadeIn(260, 0, 0, 0);
     uiState.sceneOwner = 'scene';
     domLayer.setTopOwner('scene');
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    onResized(this, () => this.onResize());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.subs.clear();
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.ceremony?.destroy();
       this.ceremony = null;
       // 这时场景里的对象已经被 Phaser 销毁了：只清引用，别再去读滚动位置

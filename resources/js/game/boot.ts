@@ -83,8 +83,9 @@ export function startGame(): Phaser.Game {
   };
   addEventListener('resize', schedule);
   addEventListener('orientationchange', schedule);
+  // 打完字再补上推迟的重排；键盘收起时还会连着发 resize，一起防抖，免得先按半屏排一次
   document.addEventListener('focusout', () => {
-    if (pending) setTimeout(apply, 50);
+    if (pending) schedule();
   });
   return game;
 }

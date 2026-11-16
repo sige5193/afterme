@@ -12,6 +12,7 @@ import type { Panel, PanelHost } from '../ui/Panel';
 import { PANELS } from '../ui/panels';
 import { Toasts } from '../ui/Toasts';
 import { setPanelCount, uiState } from '../ui/uiState';
+import { onResized } from './resized';
 
 /** 这几种是「底层」抽屉：再开一个同类的会替换掉，不会叠起来 */
 const BASE_KINDS: PanelKind[] = ['tomb', 'group', 'mine', 'search', 'zones', 'menu'];
@@ -49,12 +50,11 @@ export default class UIScene extends Phaser.Scene implements PanelHost {
       })
       .on('toast', ({ text, opts }) => this.toasts.push(text, opts));
 
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    onResized(this, () => this.onResize());
     addEventListener('keydown', this.onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.subs.clear();
       removeEventListener('keydown', this.onKey);
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     });
     this.onResize();
   }

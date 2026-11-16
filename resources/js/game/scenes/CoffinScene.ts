@@ -18,6 +18,7 @@ import { offeringList } from '../ui/offeringList';
 import { COL, HUD_H } from '../ui/theme';
 import { uiBusy } from '../ui/uiState';
 import { live } from './live';
+import { onResized } from './resized';
 
 /** 往棺材里掉的一样东西 */
 type Drop = {
@@ -140,11 +141,10 @@ export default class CoffinScene extends Phaser.Scene {
       .on('session', () => this.render())
       .on('clock', () => this.tick())
       .on('daynight', () => this.render());
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.render, this);
+    onResized(this, () => this.render());
     document.addEventListener('visibilitychange', this.onVisible);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.subs.clear();
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.render, this);
       document.removeEventListener('visibilitychange', this.onVisible);
       this.clearDrops();
       void this.flushKnocks();

@@ -12,6 +12,7 @@ import { mulberry32 } from '../pixel/art';
 import { button, colored, flow, txt, type Sizer, vbox } from '../ui/kit';
 import { COL, HUD_H } from '../ui/theme';
 import { live } from './live';
+import { onResized } from './resized';
 
 export default class TitleScene extends Phaser.Scene {
   private subs = new Subscriptions();
@@ -29,10 +30,9 @@ export default class TitleScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(300, 0, 0, 0);
     this.subs.on('daynight', () => this.render()).on('session', () => this.render());
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.render, this);
+    onResized(this, () => this.render());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.subs.clear();
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.render, this);
       this.objs = [];
       this.ui = null;
     });

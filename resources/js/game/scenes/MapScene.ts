@@ -19,6 +19,7 @@ import { bg, Label, setFrame, tappable, txt, type BBCodeText } from '../ui/kit';
 import { COL } from '../ui/theme';
 import { typingInField, uiBusy } from '../ui/uiState';
 import { live } from './live';
+import { onResized } from './resized';
 
 export type MapProp = {
   key: string;
@@ -166,7 +167,7 @@ export default abstract class MapScene extends Phaser.Scene {
     addEventListener('keyup', this.onKeyUp);
     addEventListener('blur', this.onBlur);
     this.input.on('pointerdown', this.onPointerDown, this);
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    onResized(this, () => this.onResize());
     this.subs
       .on('panel:state', (busy) => {
         if (busy) {
@@ -758,7 +759,6 @@ export default abstract class MapScene extends Phaser.Scene {
     removeEventListener('keyup', this.onKeyUp);
     removeEventListener('blur', this.onBlur);
     this.input.off('pointerdown', this.onPointerDown, this);
-    this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, this.routeCamera, this);
     this.subs.clear();
     this.destroyOverlay();

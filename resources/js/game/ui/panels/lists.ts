@@ -165,7 +165,7 @@ export class SearchPanel extends Panel {
     row.add(box, { align: 'center' });
     row.add(button(scene, '搜索', { kind: 'primary', onClick: () => void this.run() }), { align: 'center' });
     b.add(row, { expand: true });
-    if (!this.q && !this.searched) scene.time.delayedCall(80, () => input.focus());
+    if (!this.q && !this.searched) scene.time.delayedCall(80, () => input.autofocus());
     if (this.loading) b.add(note(scene, '查找中…', w), { align: 'left' });
     else if (this.searched && !this.results.length) b.add(para(scene, '没找到。可能 TA 还活着。', w, COL.dim), { align: 'left' });
     for (const c of this.results) b.add(cemeteryCard(scene, w, c, c.cause || ''), { expand: true });
