@@ -454,13 +454,17 @@ export default class FuneralScene extends Phaser.Scene {
     const box = vbox(this, { width: w, space: 4 });
     box.add(txt(this, '预览', { color: COL.dim }), { align: 'center' });
     box.add(
-      bigStoneView(this, {
-        name: this.F.name || '某某',
-        style: this.F.style,
-        birthYear: Number(this.F.birthYear) || 2000,
-        diedAt: Date.now(),
-        portrait: this.F.portrait,
-      }),
+      bigStoneView(
+        this,
+        {
+          name: this.F.name || '某某',
+          style: this.F.style,
+          birthYear: Number(this.F.birthYear) || 2000,
+          diedAt: Date.now(),
+          portrait: this.F.portrait,
+        },
+        w,
+      ),
       { align: 'center' },
     );
     if (this.step === 2) box.add(txt(this, this.F.epitaph || '终于不用上班了', { color: COL.bone, wrap: w, align: 'center' }), { align: 'center' });

@@ -92,7 +92,7 @@ export class TombPanel extends Panel {
       b.add(note(scene, '加载中…', w), { align: 'left' });
       return;
     }
-    const stone = bigStoneView(scene, { name: t.name, style: t.style, birthYear: t.birth_year, diedAt: t.died_at, portrait: t.portrait });
+    const stone = bigStoneView(scene, { name: t.name, style: t.style, birthYear: t.birth_year, diedAt: t.died_at, portrait: t.portrait }, w);
     this.stone = stone;
     b.add(stone, { align: 'center' });
     const age = new Date(t.died_at).getFullYear() - (t.birth_year || 2000);

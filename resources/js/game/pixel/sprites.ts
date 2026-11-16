@@ -265,10 +265,20 @@ function bigMupai(w: number, h: number): Canvas {
   );
 }
 
+/** 土包碑：下面这么高的一截被土包盖住，但土包最高不超过 TUBAO_MOUND_MAX */
+export const TUBAO_MOUND = 0.34;
+export const TUBAO_MOUND_MAX = 64;
+
+export function tubaoMoundH(h: number): number {
+  return Math.min(Math.round(h * TUBAO_MOUND), TUBAO_MOUND_MAX);
+}
+/** 土包碑：木桩占碑宽的比例 */
+export const TUBAO_STAKE = 0.5;
+
 function bigTubao(w: number, h: number): Canvas {
   const c = makeCanvas(w, h);
   const x = ctx2d(c);
-  const moundH = Math.round(h * 0.34);
+  const moundH = tubaoMoundH(h);
   const mound = shape(
     w,
     moundH,
@@ -279,7 +289,7 @@ function bigTubao(w: number, h: number): Canvas {
     },
     (px, py) => (py < 6 ? '#8a6b45' : (px * 3 + py) % 7 === 0 ? '#5a4329' : (px + py) % 5 === 0 ? '#7d6040' : '#6f5435'),
   );
-  const sw = Math.max(30, Math.round(w * 0.42));
+  const sw = Math.max(30, Math.round(w * TUBAO_STAKE));
   const stake = shape(sw, h - 6, (px, py) => py >= 4 || (px > 1 && px < sw - 2), (px) => (px <= 3 ? '#b08654' : px >= sw - 4 ? '#6b4b2c' : '#8f6a40'));
   x.drawImage(stake, Math.round((w - sw) / 2), 0);
   x.drawImage(mound, 0, h - moundH);
